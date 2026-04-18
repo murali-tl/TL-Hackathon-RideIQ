@@ -1,0 +1,64 @@
+@import 'tailwindcss';
+
+@custom-variant dark (&:where(.dark, .dark *));
+@custom-variant light (&:where(.light, .light *));
+
+/**
+ * RideSmart-inspired design tokens (from RideSmart_App.html).
+ * Dark palette is the reference default; light mode keeps structure with inverted neutrals.
+ */
+:root {
+  --rs-radius: 14px;
+  --rs-radius-sm: 10px;
+  --rs-font-head: 'Syne', ui-sans-serif, system-ui, sans-serif;
+  --rs-font-body: 'DM Sans', ui-sans-serif, system-ui, sans-serif;
+}
+
+.dark {
+  --rs-bg: #0d0d12;
+  --rs-surface: #16161f;
+  --rs-surface2: #1e1e2a;
+  --rs-border: rgba(255, 255, 255, 0.07);
+  --rs-accent: #ff5c1a;
+  --rs-accent2: #ffa040;
+  --rs-green: #22c97a;
+  --rs-blue: #4da6ff;
+  --rs-purple: #a78bfa;
+  --rs-red: #ff5555;
+  --rs-text: #f0eee8;
+  --rs-muted: #888888;
+}
+
+.light {
+  --rs-bg: #f4f4f7;
+  --rs-surface: #ffffff;
+  --rs-surface2: #ececf2;
+  --rs-border: rgba(0, 0, 0, 0.08);
+  --rs-accent: #e04e12;
+  --rs-accent2: #d97706;
+  --rs-green: #059669;
+  --rs-blue: #2563eb;
+  --rs-purple: #7c3aed;
+  --rs-red: #dc2626;
+  --rs-text: #111018;
+  --rs-muted: #5c5c6a;
+}
+
+@theme {
+  --font-sans: var(--rs-font-body);
+  --font-heading: var(--rs-font-head);
+}
+
+@layer base {
+  html {
+    @apply antialiased;
+  }
+  body {
+    margin: 0;
+    min-height: 100svh;
+    font-family: var(--rs-font-body);
+    font-size: 14px;
+    background: var(--rs-bg);
+    color: var(--rs-text);
+  }
+}
