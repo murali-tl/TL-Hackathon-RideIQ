@@ -1,4 +1,8 @@
-import axios, { type AxiosError, isAxiosError } from 'axios'
+import axios, {
+  type AxiosError,
+  type InternalAxiosRequestConfig,
+  isAxiosError,
+} from 'axios'
 import { getStoredAccessToken } from './authSession'
 
 /**
@@ -39,10 +43,10 @@ export const api = axios.create({
   withCredentials: true,
 })
 
-api.interceptors.request.use((config) => {
-  const t = getStoredAccessToken()
+api.interceptors.request.use((config: InternalAxiosRequestConfig) => {
+  const t = getStoredAccessToken()?.trim()
   if (t) {
-    config.headers.Authorization = `Bearer ${t}`
+    config.headers.set('Authorization', `Bearer ${t}`)
   }
   return config
 })
@@ -55,13 +59,14 @@ api.interceptors.response.use(
     }
     const status = error.response?.status ?? 0
     if (status === 401) {
-      const url = String(error.config?.url ?? '')
-      if (
-        !url.includes('/api/auth/me') &&
-        !url.includes('/api/auth/login') &&
-        !url.includes('/api/auth/register') &&
-        !url.includes('/api/auth/logout')
-      ) {
+      const path = String(error.config?.url ?? '')
+      const full = `${String(error.config?.baseURL ?? '')}${path}`
+      const isAuthCall =
+        full.includes('/api/auth/me') ||
+        full.includes('/api/auth/login') ||
+        full.includes('/api/auth/register') ||
+        full.includes('/api/auth/logout')
+      if (!isAuthCall) {
         window.dispatchEvent(new CustomEvent('rideiq:session-expired'))
       }
     }
