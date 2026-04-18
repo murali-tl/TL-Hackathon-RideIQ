@@ -62,7 +62,7 @@ export async function updateDocumentApi(
 }
 
 export async function deleteDocumentApi(id: string): Promise<void> {
-  await apiFetch<ApiEnvelope<{ id: string }>>(`/api/documents/${id}`, { method: 'DELETE' })
+  await api.delete(`/api/documents/${id}`)
 }
 
 function mapDocument(d: ApiDoc): VaultDocument {
