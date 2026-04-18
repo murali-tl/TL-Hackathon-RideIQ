@@ -67,7 +67,10 @@ type RideContextValue = {
     id: string,
     patch: Partial<Pick<VaultDocument, 'name' | 'category' | 'extraction' | 'extractionError'>>,
   ) => Promise<void>
+  deleteDocument: (id: string) => Promise<void>
+  deleteFuelEntry: (id: string) => void
   addReminder: (title: string, subtitle: string, bikeId?: string) => void
+  deleteReminder: (id: string) => void
   addServiceRecord: (input: Omit<ServiceRecord, 'id'>) => Promise<void>
   updateServiceRecord: (id: string, patch: Partial<Omit<ServiceRecord, 'id'>>) => Promise<void>
   deleteServiceRecord: (id: string) => Promise<void>
@@ -357,6 +360,21 @@ export function RideProvider({ children }: { children: ReactNode }) {
     [documents],
   )
 
+  const deleteDocument = useCallback(async (id: string) => {
+    try {
+      await documentsApi.deleteDocumentApi(id)
+      setDocuments((prev) => prev.filter((d) => d.id !== id))
+      setSyncError(null)
+    } catch (e) {
+      setSyncError(e instanceof Error ? e.message : 'Could not delete document')
+      throw e
+    }
+  }, [])
+
+  const deleteFuelEntry = useCallback((id: string) => {
+    setFuelEntries((prev) => prev.filter((e) => e.id !== id))
+  }, [])
+
   const addReminder = useCallback(
     (title: string, subtitle: string, bikeId?: string) => {
       const bid = bikeId ?? effectiveBikeId
@@ -378,6 +396,10 @@ export function RideProvider({ children }: { children: ReactNode }) {
     },
     [effectiveBikeId],
   )
+
+  const deleteReminder = useCallback((id: string) => {
+    setReminders((prev) => prev.filter((r) => r.id !== id))
+  }, [])
 
   const addServiceRecord = useCallback(async (input: Omit<ServiceRecord, 'id'>) => {
     try {
@@ -439,7 +461,10 @@ export function RideProvider({ children }: { children: ReactNode }) {
       addFuelEntry,
       addDocument,
       updateDocument,
+      deleteDocument,
+      deleteFuelEntry,
       addReminder,
+      deleteReminder,
       addServiceRecord,
       updateServiceRecord,
       deleteServiceRecord,
@@ -473,7 +498,10 @@ export function RideProvider({ children }: { children: ReactNode }) {
       addFuelEntry,
       addDocument,
       updateDocument,
+      deleteDocument,
+      deleteFuelEntry,
       addReminder,
+      deleteReminder,
       addServiceRecord,
       updateServiceRecord,
       deleteServiceRecord,

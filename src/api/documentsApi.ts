@@ -61,6 +61,10 @@ export async function updateDocumentApi(
   return mapDocument(envelope.data)
 }
 
+export async function deleteDocumentApi(id: string): Promise<void> {
+  await apiFetch<ApiEnvelope<{ id: string }>>(`/api/documents/${id}`, { method: 'DELETE' })
+}
+
 function mapDocument(d: ApiDoc): VaultDocument {
   const category = (d.category as VaultDocument['category']) || inferCategory(d)
   const raw =

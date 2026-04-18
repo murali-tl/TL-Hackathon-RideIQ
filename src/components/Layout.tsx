@@ -1,21 +1,23 @@
+import { Suspense } from 'react'
 import { NavLink, Outlet } from 'react-router-dom'
 import { APP_NAV_TABS } from '../layout/navTabs'
 import { BikeSwitcher } from './BikeSwitcher'
+import { LottieBikeLoading } from './LottieBikeLoading'
+import { ThemeBikeToggle } from './ThemeBikeToggle'
 import { useRide } from '../hooks/useRide'
-import { Button } from './ui/Button'
 
 function navLinkClass(isActive: boolean, variant: 'pill' | 'sidebar') {
   if (variant === 'pill') {
-    return `shrink-0 rounded-full border px-4 py-1.5 text-xs font-medium transition ${
+    return `inline-flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-medium transition ${
       isActive
-        ? 'border-[var(--rs-accent)] bg-[var(--rs-accent)] text-white'
-        : 'border-[var(--rs-border)] bg-transparent text-[var(--rs-muted)] hover:text-[var(--rs-text)]'
+        ? 'border-[var(--rs-accent)] bg-[var(--rs-accent)] text-white [&_svg]:text-white'
+        : 'border-[var(--rs-border)] bg-transparent text-[var(--rs-muted)] hover:text-[var(--rs-text)] [&_svg]:text-current'
     }`
   }
-  return `block rounded-[var(--rs-radius-sm)] border px-3 py-2.5 text-sm font-medium transition ${
+  return `flex items-center gap-3 rounded-[var(--rs-radius-sm)] border px-3 py-2.5 text-sm font-medium transition ${
     isActive
-      ? 'border-[var(--rs-accent)] bg-[rgba(255,92,26,0.12)] text-[var(--rs-accent)]'
-      : 'border-transparent text-[var(--rs-muted)] hover:border-[var(--rs-border)] hover:bg-[var(--rs-surface2)] hover:text-[var(--rs-text)]'
+      ? 'border-[var(--rs-accent)] bg-[rgba(255,92,26,0.12)] text-[var(--rs-accent)] [&_svg]:text-[var(--rs-accent)]'
+      : 'border-transparent text-[var(--rs-muted)] hover:border-[var(--rs-border)] hover:bg-[var(--rs-surface2)] hover:text-[var(--rs-text)] [&_svg]:text-current'
   }`
 }
 
@@ -27,75 +29,64 @@ export function Layout() {
   const { toggleTheme, apiReady, syncError, clearSyncError } = useRide()
 
   return (
-    <div className="flex min-h-svh w-full min-w-0">
+    <div className="flex h-svh min-h-0 w-full min-w-0 overflow-hidden">
       {/* Desktop sidebar */}
       <aside
         className="sticky top-0 z-[100] hidden h-svh min-h-0 w-[min(17rem,22vw)] shrink-0 flex-col border-r border-[var(--rs-border)] bg-[var(--rs-surface)] lg:flex"
         aria-label="Main navigation"
       >
-        <div className="shrink-0 border-b border-[var(--rs-border)] px-4 py-5">
-          <div className="font-[family-name:var(--rs-font-head)] text-xl font-extrabold tracking-tight text-[var(--rs-text)]">
-            Ride<span className="text-[var(--rs-accent)]">IQ</span>
+        <div className="flex shrink-0 items-center justify-between gap-3 border-b border-[var(--rs-border)] px-3 py-3.5 sm:px-4 sm:py-4">
+          <div className="min-w-0 pr-1">
+            <div className="font-[family-name:var(--rs-font-head)] text-[clamp(1.05rem,2.5vw,1.25rem)] font-extrabold leading-tight tracking-tight text-[var(--rs-text)]">
+              Ride<span className="text-[var(--rs-accent)]">IQ</span>
+            </div>
+            <p className="mt-1 max-w-[12rem] text-[10px] leading-snug text-[var(--rs-muted)] sm:text-[11px]">Bike workspace</p>
           </div>
-          <p className="mt-1 text-[11px] leading-snug text-[var(--rs-muted)]">Bike workspace</p>
+          <ThemeBikeToggle onClick={toggleTheme} />
         </div>
 
         <nav className="min-h-0 flex-1 space-y-0.5 overflow-y-auto overscroll-contain px-2 py-3" aria-label="Sections">
-          {APP_NAV_TABS.map(({ to, label }) => (
+          {APP_NAV_TABS.map(({ to, label, Icon }) => (
             <NavLink key={to} to={to} end={to === '/dashboard'} className={({ isActive }) => navLinkClass(isActive, 'sidebar')}>
-              {label}
+              <Icon className="h-5 w-5 shrink-0 opacity-90" />
+              <span className="min-w-0 leading-snug">{label}</span>
             </NavLink>
           ))}
         </nav>
 
-        <div className="shrink-0 space-y-3 border-t border-[var(--rs-border)] bg-[var(--rs-bg)]/50 p-3">
+        <div className="shrink-0 border-t border-[var(--rs-border)] bg-[var(--rs-bg)]/50 p-3">
           <BikeSwitcher orientation="vertical" />
-          <Button
-            type="button"
-            variant="muted"
-            className="w-full !py-2.5 !text-xs"
-            onClick={toggleTheme}
-            aria-label="Toggle light or dark theme"
-          >
-            Theme
-          </Button>
         </div>
       </aside>
 
       {/* Main column */}
-      <div className="flex min-h-svh min-w-0 flex-1 flex-col">
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
         {/* Mobile: single sticky chrome (no chained top offsets). */}
         <div className="sticky top-0 z-[100] shrink-0 border-b border-[var(--rs-border)] bg-[var(--rs-bg)] lg:hidden">
-          <header className="flex items-center justify-between gap-3 px-4 py-3 sm:px-5">
-            <div className="font-[family-name:var(--rs-font-head)] text-[clamp(1.1rem,4vw,1.375rem)] font-extrabold tracking-tight text-[var(--rs-text)]">
-              Ride<span className="text-[var(--rs-accent)]">IQ</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Button
-                type="button"
-                variant="muted"
-                className="!px-3 !py-2 text-xs"
-                onClick={toggleTheme}
-                aria-label="Toggle light or dark theme"
-              >
-                Theme
-              </Button>
-              <div
-                className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-[var(--rs-accent)] text-lg"
-                aria-hidden
-              >
-                🏍
+          <header className="flex items-center justify-between gap-3 px-4 py-2.5 sm:px-5 sm:py-3">
+            <div className="min-w-0">
+              <div className="font-[family-name:var(--rs-font-head)] text-[clamp(1.1rem,4.2vw,1.4rem)] font-extrabold leading-tight tracking-tight text-[var(--rs-text)]">
+                Ride<span className="text-[var(--rs-accent)]">IQ</span>
               </div>
+              <p className="mt-0.5 text-[10px] leading-snug text-[var(--rs-muted)] sm:text-[11px]">Bike workspace</p>
             </div>
+            <ThemeBikeToggle onClick={toggleTheme} />
           </header>
 
           <nav
             className="flex gap-1.5 overflow-x-auto border-t border-[var(--rs-border)] px-3 py-2.5 [-ms-overflow-style:none] [scrollbar-width:none] sm:px-4 [&::-webkit-scrollbar]:hidden"
             aria-label="Primary"
           >
-            {APP_NAV_TABS.map(({ to, label }) => (
-              <NavLink key={to} to={to} end={to === '/dashboard'} className={({ isActive }) => navLinkClass(isActive, 'pill')}>
-                {label}
+            {APP_NAV_TABS.map(({ to, label, shortLabel, Icon }) => (
+              <NavLink
+                key={to}
+                to={to}
+                title={label}
+                end={to === '/dashboard'}
+                className={({ isActive }) => navLinkClass(isActive, 'pill')}
+              >
+                <Icon className="h-4 w-4 shrink-0" />
+                <span>{shortLabel ?? label}</span>
               </NavLink>
             ))}
           </nav>
@@ -127,7 +118,9 @@ export function Layout() {
                 </button>
               </div>
             ) : null}
-            <Outlet />
+            <Suspense fallback={<LottieBikeLoading label="Loading page…" />}>
+              <Outlet />
+            </Suspense>
           </div>
         </main>
       </div>

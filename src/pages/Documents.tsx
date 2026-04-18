@@ -3,6 +3,7 @@ import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { extractDocumentWithGemini } from '../api/aiApi'
 import { Field, Select, TextInput } from '../components/Form'
+import { IconTrash } from '../components/icons'
 import { useRide } from '../hooks/useRide'
 import { Button } from '../components/ui/Button'
 import { RsCard } from '../components/ui/RsCard'
@@ -53,7 +54,7 @@ function statusPill(doc: VaultDocument) {
 type ExEdit = { holderName: string; documentNumber: string; expiryDateIso: string }
 
 export default function Documents() {
-  const { documentsForSelectedBike, selectedBike, addDocument, updateDocument, apiReady } = useRide()
+  const { documentsForSelectedBike, selectedBike, addDocument, updateDocument, deleteDocument, apiReady } = useRide()
   const [busy, setBusy] = useState(false)
   const [ocrPct, setOcrPct] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -146,6 +147,16 @@ export default function Documents() {
     }
   }
 
+  async function onDeleteDocument(doc: VaultDocument) {
+    if (!confirm(`Delete “${doc.name}”? This cannot be undone.`)) return
+    try {
+      await deleteDocument(doc.id)
+      if (selectedId === doc.id) setSelectedId(null)
+    } catch {
+      /* syncError */
+    }
+  }
+
   async function onSaveExtraction(e: FormEvent) {
     e.preventDefault()
     if (!selected) return
@@ -198,28 +209,40 @@ export default function Documents() {
       ) : null}
 
       {documentsForSelectedBike.map((d) => (
-        <button
+        <div
           key={d.id}
-          type="button"
-          onClick={() => setSelectedId(d.id === selectedId ? null : d.id)}
-          className="mb-2 flex w-full cursor-pointer items-center gap-3 rounded-[10px] border border-[var(--rs-border)] bg-[var(--rs-surface2)] p-3 text-left transition hover:border-[var(--rs-accent)]"
+          className="mb-2 flex items-center gap-2 rounded-[10px] border border-[var(--rs-border)] bg-[var(--rs-surface2)] p-2 pl-3 transition hover:border-[var(--rs-accent)]"
         >
-          <div
-            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-lg"
-            style={{ background: 'rgba(77,166,255,0.1)' }}
-            aria-hidden
+          <button
+            type="button"
+            onClick={() => setSelectedId(d.id === selectedId ? null : d.id)}
+            className="flex min-w-0 flex-1 cursor-pointer items-center gap-3 rounded-lg py-1 text-left"
           >
-            {docEmoji(d.category)}
-          </div>
-          <div className="min-w-0 flex-1">
-            <div className="truncate text-[13px] font-medium text-[var(--rs-text)]">{d.name}</div>
-            <div className="mt-0.5 truncate text-[11px] text-[var(--rs-muted)]">{extractionSummary(d.extraction)}</div>
-            {d.extractionError ? (
-              <div className="mt-1 text-[11px] text-[var(--rs-accent)]">Issue: {d.extractionError}</div>
-            ) : null}
-          </div>
-          {statusPill(d)}
-        </button>
+            <div
+              className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg text-lg"
+              style={{ background: 'rgba(77,166,255,0.1)' }}
+              aria-hidden
+            >
+              {docEmoji(d.category)}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[13px] font-medium text-[var(--rs-text)]">{d.name}</div>
+              <div className="mt-0.5 truncate text-[11px] text-[var(--rs-muted)]">{extractionSummary(d.extraction)}</div>
+              {d.extractionError ? (
+                <div className="mt-1 text-[11px] text-[var(--rs-accent)]">Issue: {d.extractionError}</div>
+              ) : null}
+            </div>
+            {statusPill(d)}
+          </button>
+          <button
+            type="button"
+            className="shrink-0 rounded-lg p-2.5 text-[var(--rs-muted)] transition hover:bg-[rgba(255,85,85,0.12)] hover:text-[var(--rs-red)]"
+            aria-label={`Delete ${d.name}`}
+            onClick={() => void onDeleteDocument(d)}
+          >
+            <IconTrash className="h-5 w-5" />
+          </button>
+        </div>
       ))}
 
       {selected ? (
@@ -283,6 +306,15 @@ export default function Documents() {
               </Field>
               <Button type="submit" className="w-full">
                 Save extracted fields
+              </Button>
+              <Button
+                type="button"
+                variant="muted"
+                className="w-full !border-[rgba(255,85,85,0.45)] !text-[var(--rs-red)] hover:!bg-[rgba(255,85,85,0.1)]"
+                onClick={() => void onDeleteDocument(selected)}
+              >
+                <IconTrash className="h-4 w-4 shrink-0" />
+                Delete document
               </Button>
             </form>
           </RsCard>
