@@ -5,7 +5,7 @@ import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { RsCard } from '../components/ui/RsCard'
 
-type SplitMode = 'group' | 'pillion' | 'solo'
+type SplitMode = 'group' | 'pillion'
 
 type Person = { name: string; km: string }
 
@@ -25,25 +25,13 @@ type ShareRow = {
 }
 
 function badgeForMode(mode: SplitMode): { label: string; tone: 'accent' | 'green' | 'blue' | 'purple' } {
-  switch (mode) {
-    case 'solo':
-      return { label: 'Solo ride', tone: 'blue' }
-    case 'pillion':
-      return { label: 'Pillion (two-up)', tone: 'purple' }
-    default:
-      return { label: 'Group ride', tone: 'purple' }
-  }
+  if (mode === 'pillion') return { label: 'Pillion (two-up)', tone: 'purple' }
+  return { label: 'Group ride', tone: 'purple' }
 }
 
 function breakdownBadge(mode: SplitMode, pillionEqual: boolean): { label: string; tone: 'accent' | 'green' | 'blue' | 'purple' } {
-  switch (mode) {
-    case 'solo':
-      return { label: 'Full trip', tone: 'green' }
-    case 'pillion':
-      return { label: pillionEqual ? '50 / 50' : 'Custom %', tone: 'green' }
-    default:
-      return { label: 'Fair by km', tone: 'green' }
-  }
+  if (mode === 'pillion') return { label: pillionEqual ? '50 / 50' : 'Custom %', tone: 'green' }
+  return { label: 'Fair by km', tone: 'green' }
 }
 
 export default function Split() {
@@ -53,7 +41,6 @@ export default function Split() {
   const [people, setPeople] = useState<Person[]>(() =>
     Array.from({ length: 3 }, (_, i) => ({ name: defaultNames[i] ?? '', km: defaultKm[i] ?? '0' })),
   )
-  const [soloName, setSoloName] = useState('')
   const [riderName, setRiderName] = useState('Rider')
   const [pillionName, setPillionName] = useState('Pillion')
   const [pillionEqual, setPillionEqual] = useState(true)
@@ -63,11 +50,6 @@ export default function Split() {
 
   const shares = useMemo((): ShareRow[] => {
     const totalNum = Math.max(0, parseFloat(total) || 0)
-
-    if (splitMode === 'solo') {
-      const name = soloName.trim() || 'You'
-      return [{ name, share: totalNum, detail: 'Pays full trip cost' }]
-    }
 
     if (splitMode === 'pillion') {
       const rName = riderName.trim() || 'Rider'
@@ -102,7 +84,7 @@ export default function Split() {
         sumKm > 0 ? Math.round((p.km / sumKm) * totalNum) : Math.round(totalNum / Math.max(1, parsed.length)),
       detail: `${p.km} km ridden`,
     }))
-  }, [splitMode, total, people, soloName, riderName, pillionName, pillionEqual, riderPercent])
+  }, [splitMode, total, people, riderName, pillionName, pillionEqual, riderPercent])
 
   function updateCount(next: number) {
     setN(next)
@@ -127,20 +109,14 @@ export default function Split() {
   const totalNum = parseFloat(total) || 0
 
   const submitLabel =
-    splitMode === 'group'
-      ? 'Split fairly by distance'
-      : splitMode === 'pillion'
-        ? 'Calculate split'
-        : 'Show amount'
+    splitMode === 'group' ? 'Split fairly by distance' : 'Calculate split'
 
   const footerHint =
     splitMode === 'group'
       ? 'Proportional to distance ridden'
-      : splitMode === 'pillion'
-        ? pillionEqual
-          ? 'Equal split between rider and pillion'
-          : 'Split by custom percentage'
-        : 'Single rider covers the full cost'
+      : pillionEqual
+        ? 'Equal split between rider and pillion'
+        : 'Split by custom percentage'
 
   return (
     <div>
@@ -158,24 +134,12 @@ export default function Split() {
             >
               <option value="group">Group ride — split by km each person rode</option>
               <option value="pillion">Pillion (two-up) — rider + passenger, same bike</option>
-              <option value="solo">Solo — one rider, full cost</option>
             </Select>
           </Field>
 
           <Field label="Total trip cost (₹)" htmlFor="tot">
             <TextInput id="tot" inputMode="decimal" value={total} onChange={(e) => setTotal(e.target.value)} />
           </Field>
-
-          {splitMode === 'solo' ? (
-            <Field label="Rider name" htmlFor="solo-n">
-              <TextInput
-                id="solo-n"
-                placeholder="Your name"
-                value={soloName}
-                onChange={(e) => setSoloName(e.target.value)}
-              />
-            </Field>
-          ) : null}
 
           {splitMode === 'pillion' ? (
             <>
