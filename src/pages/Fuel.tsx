@@ -2,6 +2,7 @@ import type { FormEvent } from 'react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Field, Select, TextInput } from '../components/Form'
+import { IconTrash } from '../components/icons'
 import { useRide } from '../hooks/useRide'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
@@ -29,7 +30,7 @@ function sumThisMonth(entries: { date: string; cost: number }[]) {
 }
 
 export default function Fuel() {
-  const { fuelForSelectedBike, selectedBike, addFuelEntry, mileageStats } = useRide()
+  const { fuelForSelectedBike, selectedBike, addFuelEntry, deleteFuelEntry, mileageStats } = useRide()
   const [tab, setTab] = useState<'calc' | 'log'>('calc')
 
   const [bikeType, setBikeType] = useState<BikeType>('125cc')
@@ -281,15 +282,29 @@ export default function Fuel() {
               <ul className="divide-y divide-[var(--rs-border)]">
                 {fuelForSelectedBike.map((e) => (
                   <li key={e.id} className="flex flex-col gap-1 py-3 first:pt-0">
-                    <div className="flex justify-between gap-2">
-                      <span className="text-[13px] font-medium text-[var(--rs-text)]">{e.date}</span>
-                      <span className="font-[family-name:var(--rs-font-head)] text-base font-bold text-[var(--rs-accent)]">
-                        {e.mileage} km/L
-                      </span>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[13px] font-medium text-[var(--rs-text)]">{e.date}</div>
+                        <p className="mt-0.5 text-xs text-[var(--rs-muted)]">
+                          {e.fuelLiters} L · {formatMoney(e.cost)} · {e.distanceKm} km
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span className="font-[family-name:var(--rs-font-head)] text-base font-bold text-[var(--rs-accent)]">
+                          {e.mileage} km/L
+                        </span>
+                        <button
+                          type="button"
+                          className="rounded-lg p-1.5 text-[var(--rs-muted)] transition hover:bg-[rgba(255,85,85,0.12)] hover:text-[var(--rs-red)]"
+                          aria-label={`Delete fuel log ${e.date}`}
+                          onClick={() => {
+                            if (confirm(`Remove the fuel entry from ${e.date}?`)) deleteFuelEntry(e.id)
+                          }}
+                        >
+                          <IconTrash className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-xs text-[var(--rs-muted)]">
-                      {e.fuelLiters} L · {formatMoney(e.cost)} · {e.distanceKm} km
-                    </p>
                   </li>
                 ))}
               </ul>

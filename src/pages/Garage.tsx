@@ -1,5 +1,6 @@
-import type { FormEvent } from 'react'
+import type { ChangeEvent, FormEvent } from 'react'
 import { useMemo, useState } from 'react'
+import * as bikesApi from '../api/bikesApi'
 import { Field, Select, TextInput } from '../components/Form'
 import { BIKE_BRAND_OPTIONS, BIKE_CATEGORY_OPTIONS, buildYearOptions, TYPICAL_KMPL_PRESET_NUMS } from '../data/bikeFormOptions'
 import { useRide } from '../hooks/useRide'
@@ -8,6 +9,7 @@ import { RsCard } from '../components/ui/RsCard'
 import { SectionHeading } from '../components/ui/SectionHeading'
 import type { Bike, BikeFuelType } from '../types'
 import { lookupBikeModel } from '../utils/bikeLookup'
+import { fileToDataUrl } from '../utils/fileToBase64'
 
 const YEAR_OPTIONS = buildYearOptions()
 const KMPL_PRESET_VALUES: string[] = [...TYPICAL_KMPL_PRESET_NUMS]
@@ -22,6 +24,8 @@ type Draft = {
   category: string
   claimedMileageKmL: string
   fuelSystem: Bike['fuelSystem']
+  /** Data URL or raw base64 for API */
+  imageDataUrl: string
 }
 
 function emptyDraft(): Draft {
@@ -35,6 +39,7 @@ function emptyDraft(): Draft {
     category: 'Commuter',
     claimedMileageKmL: '45',
     fuelSystem: 'Fuel Injected',
+    imageDataUrl: '',
   }
 }
 
@@ -97,9 +102,16 @@ export default function Garage() {
       category: b.category,
       claimedMileageKmL: String(b.claimedMileageKmL ?? ''),
       fuelSystem: b.fuelSystem,
+      imageDataUrl: b.image ?? '',
     })
     setModelQuery(`${b.brand} ${b.model}`)
     setLookupHint(null)
+    void bikesApi
+      .fetchBike(b.id)
+      .then((full) => {
+        setDraft((d) => ({ ...d, imageDataUrl: full.image ?? d.imageDataUrl }))
+      })
+      .catch(() => {})
   }
 
   async function runLookup() {
@@ -129,7 +141,7 @@ export default function Garage() {
     }
   }
 
-  function onSave(e: FormEvent) {
+  async function onSave(e: FormEvent) {
     e.preventDefault()
     const km = parseFloat(draft.claimedMileageKmL)
     const payload: Omit<Bike, 'id' | 'createdAt'> = {
@@ -142,20 +154,37 @@ export default function Garage() {
       category: draft.category.trim() || 'Motorcycle',
       claimedMileageKmL: Number.isFinite(km) ? km : undefined,
       fuelSystem: draft.fuelSystem,
+      image: draft.imageDataUrl || '',
     }
     if (!payload.brand || !payload.model || !payload.registrationNumber) return
-    if (mode === 'edit' && editingId) {
-      updateBike(editingId, payload)
+    try {
+      if (mode === 'edit' && editingId) {
+        await updateBike(editingId, payload)
+        setMode('list')
+        return
+      }
+      await addBike(payload)
       setMode('list')
-      return
+    } catch {
+      /* RideContext sets syncError */
     }
-    addBike(payload)
-    setMode('list')
   }
 
-  function onTryDelete(id: string) {
+  async function onBikePhoto(ev: ChangeEvent<HTMLInputElement>) {
+    const file = ev.target.files?.[0]
+    ev.target.value = ''
+    if (!file || !file.type.startsWith('image/')) return
+    try {
+      const url = await fileToDataUrl(file)
+      setDraft((d) => ({ ...d, imageDataUrl: url }))
+    } catch {
+      window.alert('Could not read that image. Try another file.')
+    }
+  }
+
+  async function onTryDelete(id: string) {
     if (!window.confirm('Delete this bike and all fuel logs, documents, reminders, and service records for it?')) return
-    const ok = deleteBike(id)
+    const ok = await deleteBike(id)
     if (!ok) window.alert('Keep at least one bike in the garage.')
   }
 
@@ -172,7 +201,7 @@ export default function Garage() {
         >
           <p className="mb-3 text-xs text-[var(--rs-muted)]">
             Enter a model name and run smart lookup (curated + Wikidata + optional API). If nothing matches, fill every
-            field manually — all saves stay on-device.
+            field manually — bike details are saved to your RideIQ server.
           </p>
           <div className="mb-3 flex gap-2">
             <Field label="Model search" htmlFor="mq">
@@ -314,6 +343,32 @@ export default function Garage() {
                 <option>Carburetor</option>
               </Select>
             </Field>
+            <Field label="Bike photo (optional)" htmlFor="bike-photo">
+              <div className="flex flex-wrap items-center gap-3">
+                {draft.imageDataUrl ? (
+                  <img
+                    src={draft.imageDataUrl}
+                    alt=""
+                    className="h-16 w-16 rounded-lg border border-[var(--rs-border)] object-cover"
+                  />
+                ) : (
+                  <span className="text-[11px] text-[var(--rs-muted)]">No photo</span>
+                )}
+                <label className="cursor-pointer text-xs font-medium text-[var(--rs-accent)] hover:underline">
+                  Choose image
+                  <input id="bike-photo" type="file" accept="image/*" className="sr-only" onChange={onBikePhoto} />
+                </label>
+                {draft.imageDataUrl ? (
+                  <button
+                    type="button"
+                    className="text-xs text-[var(--rs-muted)] hover:text-[var(--rs-accent)]"
+                    onClick={() => setDraft((d) => ({ ...d, imageDataUrl: '' }))}
+                  >
+                    Remove
+                  </button>
+                ) : null}
+              </div>
+            </Field>
             <Button type="submit" className="mt-2 w-full">
               {mode === 'edit' ? 'Save changes' : 'Save bike'}
             </Button>
@@ -332,7 +387,15 @@ export default function Garage() {
       {bikes.map((b) => (
         <RsCard key={b.id} className="!mb-2">
           <div className="flex items-start justify-between gap-2">
-            <div>
+            <div className="flex min-w-0 flex-1 gap-3">
+              {b.image ? (
+                <img
+                  src={b.image}
+                  alt=""
+                  className="h-14 w-14 shrink-0 rounded-lg border border-[var(--rs-border)] object-cover"
+                />
+              ) : null}
+              <div className="min-w-0">
               <h3 className="font-[family-name:var(--rs-font-head)] text-base font-bold text-[var(--rs-text)]">
                 {b.brand} {b.model}
               </h3>
@@ -340,6 +403,7 @@ export default function Garage() {
               <p className="mt-1 text-[11px] text-[var(--rs-muted)]">
                 {b.year} · {b.engineCc} cc · {b.fuelType} · {b.category}
               </p>
+              </div>
             </div>
             <div className="flex shrink-0 flex-col gap-1">
               <Button type="button" variant="outline" className="!px-2 !py-1.5 !text-[11px]" onClick={() => setSelectedBikeId(b.id)}>

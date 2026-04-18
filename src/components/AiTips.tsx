@@ -3,13 +3,18 @@ import { useRide } from '../hooks/useRide'
 import { getSmartTips } from '../utils/aiTips'
 import { RsCard } from './ui/RsCard'
 
-export function AiTips() {
+type AiTipsProps = {
+  /** When set, avoids repeating “AI smart tips” if the page already uses that section title. */
+  embedded?: boolean
+}
+
+export function AiTips({ embedded = false }: AiTipsProps) {
   const { mileageStats } = useRide()
   const tips = getSmartTips(mileageStats)
 
   return (
     <RsCard
-      title="AI smart tips"
+      title={embedded ? 'Personalized for your bike' : 'AI smart tips'}
       subtitle="On-device rules from your km/L — no cloud calls."
       className="border-[rgba(255,92,26,0.3)] bg-gradient-to-br from-[rgba(255,92,26,0.12)] to-[rgba(255,160,64,0.06)]"
     >

@@ -16,7 +16,7 @@ export type DocumentExtraction = {
   /** ISO yyyy-mm-dd when parsed */
   expiryDateIso: string | null
   confidence: 'high' | 'medium' | 'low'
-  source: 'pdf-text' | 'ocr' | 'none'
+  source: 'pdf-text' | 'ocr' | 'gemini' | 'none'
 }
 
 export type VaultDocument = {
@@ -50,6 +50,8 @@ export type Bike = {
   claimedMileageKmL?: number
   fuelSystem: 'Fuel Injected' | 'Carburetor'
   createdAt: string
+  /** Optional photo (data URL or base64) from API */
+  image?: string
 }
 
 export type ReminderBadge = 'ok' | 'warn' | 'due'
