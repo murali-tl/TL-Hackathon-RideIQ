@@ -1,15 +1,17 @@
 import type { ChangeEvent, FormEvent } from 'react'
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { extractDocumentWithGemini } from '../api/aiApi'
 import { Field, Select, TextInput } from '../components/Form'
 import { useRide } from '../hooks/useRide'
 import { Button } from '../components/ui/Button'
 import { RsCard } from '../components/ui/RsCard'
 import { SectionHeading } from '../components/ui/SectionHeading'
-import type { VaultDocument } from '../types'
-import { DocumentProcessError, extractDocumentFields } from '../utils/documentExtraction'
+import type { DocumentExtraction, VaultDocument } from '../types'
+import { DocumentProcessError, extractDocumentFields, validateUpload } from '../utils/documentExtraction'
 import { inferDocumentCategory } from '../utils/documentCategory'
 import { documentExpiryState, extractionSummary } from '../utils/docDisplay'
+import { fileToDataUrl } from '../utils/fileToBase64'
 import { emptyExtraction } from '../utils/storage'
 
 function friendlyType(mime: string) {
@@ -51,7 +53,7 @@ function statusPill(doc: VaultDocument) {
 type ExEdit = { holderName: string; documentNumber: string; expiryDateIso: string }
 
 export default function Documents() {
-  const { documentsForSelectedBike, selectedBike, addDocument, updateDocument } = useRide()
+  const { documentsForSelectedBike, selectedBike, addDocument, updateDocument, apiReady } = useRide()
   const [busy, setBusy] = useState(false)
   const [ocrPct, setOcrPct] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -73,57 +75,95 @@ export default function Documents() {
   async function onPick(ev: ChangeEvent<HTMLInputElement>) {
     const file = ev.target.files?.[0]
     ev.target.value = ''
-    if (!file || !selectedBike) return
+    if (!file || !selectedBike || !apiReady) return
     setError(null)
     setOcrPct(null)
     setBusy(true)
+    try {
+      validateUpload(file)
+    } catch (err) {
+      setBusy(false)
+      const msg = err instanceof DocumentProcessError ? err.message : 'Invalid file.'
+      setError(msg)
+      return
+    }
     const mime = file.type || inferMimeFromName(file.name)
     const category = inferDocumentCategory(file.name)
+    let extraction: DocumentExtraction
+    let extractionError: string | undefined
+    let dataUrl: string
     try {
-      const extraction = await extractDocumentFields(file, (p) => setOcrPct(p))
-      addDocument({
+      dataUrl = await fileToDataUrl(file)
+    } catch {
+      setBusy(false)
+      setError('Could not read this file.')
+      return
+    }
+    try {
+      const g = await extractDocumentWithGemini({
+        imageBase64: dataUrl,
+        mimeType: mime,
+        fileName: file.name,
+        category,
+      })
+      extraction = {
+        holderName: g.holderName,
+        documentNumber: g.documentNumber,
+        expiryDateIso: g.expiryDateIso,
+        confidence: g.confidence,
+        source: 'gemini',
+      }
+    } catch {
+      try {
+        extraction = await extractDocumentFields(file, (p) => setOcrPct(p))
+      } catch (err) {
+        const msg =
+          err instanceof DocumentProcessError
+            ? err.message
+            : err instanceof Error
+              ? err.message
+              : 'Something went wrong processing this file.'
+        extraction = emptyExtraction('none')
+        extractionError = msg
+        setError(msg)
+      }
+    }
+    try {
+      await addDocument({
         bikeId: selectedBike.id,
         name: file.name,
         type: mime,
         category,
         extraction,
+        extractionError,
+        image: dataUrl,
       })
-    } catch (err) {
-      const msg =
-        err instanceof DocumentProcessError
-          ? err.message
-          : err instanceof Error
-            ? err.message
-            : 'Something went wrong processing this file.'
-      addDocument({
-        bikeId: selectedBike.id,
-        name: file.name,
-        type: mime,
-        category,
-        extraction: emptyExtraction(),
-        extractionError: msg,
-      })
-      setError(msg)
+    } catch {
+      setError((prev) => prev ?? 'Could not save document to the server.')
     } finally {
       setBusy(false)
       setOcrPct(null)
     }
   }
 
-  function onSaveExtraction(e: FormEvent) {
+  async function onSaveExtraction(e: FormEvent) {
     e.preventDefault()
     if (!selected) return
-    updateDocument(selected.id, {
-      extraction: {
-        ...selected.extraction,
-        holderName: exEdit.holderName.trim() || null,
-        documentNumber: exEdit.documentNumber.trim() || null,
-        expiryDateIso: exEdit.expiryDateIso.trim() || null,
-        confidence: 'high',
-        source: selected.extraction.source,
-      },
-      extractionError: undefined,
-    })
+    try {
+      await updateDocument(selected.id, {
+        extraction: {
+          ...selected.extraction,
+          holderName: exEdit.holderName.trim() || null,
+          documentNumber: exEdit.documentNumber.trim() || null,
+          expiryDateIso: exEdit.expiryDateIso.trim() || null,
+          confidence: 'high',
+          source: selected.extraction.source,
+        },
+        extractionError: undefined,
+      })
+    } catch {
+      /* context syncError */
+    }
   }
 
   if (!selectedBike) {
@@ -201,7 +241,7 @@ export default function Documents() {
             </dl>
 
             <form onSubmit={onSaveExtraction} className="space-y-2 border-t border-[var(--rs-border)] pt-3">
-              <p className="text-[11px] text-[var(--rs-muted)]">Correct OCR / PDF fields manually if needed.</p>
+              <p className="text-[11px] text-[var(--rs-muted)]">Correct OCR / PDF / Gemini fields manually if needed.</p>
               <Field label="Name on document" htmlFor="ex-name">
                 <TextInput
                   id="ex-name"
@@ -228,9 +268,10 @@ export default function Documents() {
                 <Select
                   id="ex-cat"
                   value={selected.category}
-                  onChange={(ev) =>
-                    updateDocument(selected.id, { category: ev.target.value as VaultDocument['category'] })
-                  }
+                  onChange={(ev) => {
+                    const cat = ev.target.value as VaultDocument['category']
+                    void updateDocument(selected.id, { category: cat }).catch(() => {})
+                  }}
                   aria-label="Document category"
                 >
                   <option value="license">License</option>
@@ -256,9 +297,12 @@ export default function Documents() {
           <div className="text-[13px] font-medium text-[var(--rs-text)]">
             {busy ? `Processing${ocrPct != null ? ` · OCR ${ocrPct}%` : '…'}` : 'Upload new document'}
           </div>
-          <div className="text-[11px] text-[var(--rs-muted)]">PDF, PNG, JPG, WEBP — max 10 MB · processed locally</div>
+          <div className="text-[11px] text-[var(--rs-muted)]">
+            PDF, PNG, JPG, WEBP — max 10 MB · Gemini extraction when the server is configured, otherwise local OCR /
+            PDF text
+          </div>
         </div>
-        <input type="file" className="sr-only" accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={onPick} disabled={busy} />
+        <input type="file" className="sr-only" accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={onPick} disabled={busy || !apiReady} />
       </label>
     </div>
   )

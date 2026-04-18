@@ -51,26 +51,37 @@ export function BikeSwitcher({ orientation = 'horizontal' }: BikeSwitcherProps) 
               onClick={() => setSelectedBikeId(b.id)}
               className={
                 isVertical
-                  ? `w-full rounded-[var(--rs-radius-sm)] border px-3 py-2.5 text-left text-xs font-medium transition ${
+                  ? `flex w-full items-center gap-2 rounded-[var(--rs-radius-sm)] border px-3 py-2.5 text-left text-xs font-medium transition ${
                       active
                         ? 'border-[var(--rs-accent)] bg-[var(--rs-accent)] text-white'
                         : 'border-[var(--rs-border)] bg-[var(--rs-surface2)] text-[var(--rs-muted)] hover:border-[var(--rs-accent)] hover:text-[var(--rs-text)]'
                     }`
-                  : `shrink-0 rounded-full border px-3 py-1.5 text-left text-[11px] font-medium transition ${
+                  : `flex max-w-[min(200px,55vw)] shrink-0 items-center gap-2 rounded-full border px-2 py-1.5 text-left text-[11px] font-medium transition ${
                       active
                         ? 'border-[var(--rs-accent)] bg-[var(--rs-accent)] text-white'
-                        : 'max-w-[min(140px,40vw)] border-[var(--rs-border)] bg-[var(--rs-surface2)] text-[var(--rs-muted)] hover:border-[var(--rs-accent)] hover:text-[var(--rs-text)]'
+                        : 'border-[var(--rs-border)] bg-[var(--rs-surface2)] text-[var(--rs-muted)] hover:border-[var(--rs-accent)] hover:text-[var(--rs-text)]'
                     }`
               }
             >
-              <span className="block truncate">
-                {b.brand} {b.model}
-              </span>
-              {!active ? (
-                <span className={`mt-0.5 block truncate text-[10px] opacity-80 ${isVertical ? '' : ''}`}>
-                  {b.registrationNumber}
+              {b.image ? (
+                <img
+                  src={b.image}
+                  alt=""
+                  className={`shrink-0 rounded-md object-cover ${isVertical ? 'h-9 w-9' : 'h-7 w-7'}`}
+                />
+              ) : (
+                <span className={`flex shrink-0 items-center justify-center rounded-md bg-black/10 ${isVertical ? 'h-9 w-9 text-base' : 'h-7 w-7 text-sm'}`} aria-hidden>
+                  🏍
                 </span>
-              ) : null}
+              )}
+              <span className="min-w-0 flex-1">
+                <span className="block truncate">
+                  {b.brand} {b.model}
+                </span>
+                {!active ? (
+                  <span className={`mt-0.5 block truncate text-[10px] opacity-80`}>{b.registrationNumber}</span>
+                ) : null}
+              </span>
             </button>
           )
         })}

@@ -24,7 +24,7 @@ function navLinkClass(isActive: boolean, variant: 'pill' | 'sidebar') {
  * No max-width cap — content uses horizontal padding that scales with viewport.
  */
 export function Layout() {
-  const { toggleTheme } = useRide()
+  const { toggleTheme, apiReady, syncError, clearSyncError } = useRide()
 
   return (
     <div className="flex min-h-svh w-full min-w-0">
@@ -107,6 +107,26 @@ export function Layout() {
 
         <main className="min-h-0 flex-1 overflow-y-auto overscroll-y-contain [scrollbar-gutter:stable]">
           <div className="mx-auto w-full max-w-[min(100%,96rem)] px-[clamp(1rem,3vw,2.5rem)] py-5 sm:py-6 lg:py-8">
+            {!apiReady ? (
+              <p className="mb-4 rounded-[var(--rs-radius)] border border-[var(--rs-border)] bg-[var(--rs-surface2)] px-3 py-2 text-xs text-[var(--rs-muted)]">
+                Loading garage from server…
+              </p>
+            ) : null}
+            {syncError ? (
+              <div
+                role="alert"
+                className="mb-4 flex flex-wrap items-start gap-2 rounded-[var(--rs-radius)] border border-[rgba(255,85,85,0.35)] bg-[rgba(220,50,50,0.08)] px-3 py-2 text-xs text-[var(--rs-text)]"
+              >
+                <span className="min-w-0 flex-1">{syncError}</span>
+                <button
+                  type="button"
+                  className="shrink-0 font-medium text-[var(--rs-accent)] hover:underline"
+                  onClick={clearSyncError}
+                >
+                  Dismiss
+                </button>
+              </div>
+            ) : null}
             <Outlet />
           </div>
         </main>
