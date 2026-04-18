@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { Field, TextInput } from '../components/Form'
+import { Field, PasswordField, TextInput } from '../components/Form'
 import { useAuth } from '../context/AuthContext'
 import { ApiError } from '../api/http'
 
@@ -64,17 +64,15 @@ export default function Register() {
               required
             />
           </Field>
-          <Field label="Password" htmlFor="reg-password">
-            <TextInput
-              id="reg-password"
-              type="password"
-              autoComplete="new-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              minLength={8}
-              required
-            />
-          </Field>
+          <PasswordField
+            id="reg-password"
+            label="Password"
+            autoComplete="new-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            minLength={8}
+            required
+          />
 
           {error ? (
             <p className="pt-2 text-xs text-[rgba(220,50,50,0.95)]" role="alert">

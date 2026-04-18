@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
-import { Field, TextInput } from '../components/Form'
+import { Field, PasswordField, TextInput } from '../components/Form'
 import { useAuth } from '../context/AuthContext'
 import { ApiError } from '../api/http'
 
@@ -56,16 +56,14 @@ export default function Login() {
               required
             />
           </Field>
-          <Field label="Password" htmlFor="login-password">
-            <TextInput
-              id="login-password"
-              type="password"
-              autoComplete="current-password"
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              required
-            />
-          </Field>
+          <PasswordField
+            id="login-password"
+            label="Password"
+            autoComplete="current-password"
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
+            required
+          />
 
           {error ? (
             <p className="pt-2 text-xs text-[rgba(220,50,50,0.95)]" role="alert">
