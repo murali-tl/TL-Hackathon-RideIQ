@@ -95,3 +95,11 @@ export type BunkPlace = {
   reviews: number
   accentRank: 'accent' | 'muted' | 'outline'
 }
+
+/** User note on a bunk (community or device-local when API is offline). */
+export type BunkComment = {
+  id: string
+  bunkId: string
+  text: string
+  createdAt: string
+}

@@ -1,5 +1,7 @@
+import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { AiTips } from '../components/AiTips'
+import { BikeSelectDropdown } from '../components/BikeSelectDropdown'
 import { Badge } from '../components/ui/Badge'
 import { useRide } from '../hooks/useRide'
 import { RsCard } from '../components/ui/RsCard'
@@ -8,6 +10,7 @@ import { StatTile } from '../components/ui/StatTile'
 import { TipCard } from '../components/ui/TipCard'
 import { speedZones, staticSmartTips } from '../data/tipsContent'
 import { documentExpiryState, formatIsoDate } from '../utils/docDisplay'
+import { formatEngineCcDisplay, formatEngineCcLabel } from '../utils/bikeCc'
 
 const zoneClass: Record<string, string> = {
   accent: 'bg-[rgba(255,92,26,0.09)] text-[var(--rs-accent)]',
@@ -28,8 +31,21 @@ function formatKmL(v: number | null) {
 }
 
 export default function Dashboard() {
-  const { mileageStats, selectedBike, fuelForSelectedBike, documentsForSelectedBike } = useRide()
+  const [dashTab, setDashTab] = useState<'overview' | 'expenses'>('overview')
+  const {
+    mileageStats,
+    selectedBike,
+    bikes,
+    fuelForSelectedBike,
+    documentsForSelectedBike,
+    serviceForSelectedBike,
+  } = useRide()
   const { average, best, totalFuelCost } = mileageStats
+  const totalServiceSpend = useMemo(
+    () => serviceForSelectedBike.reduce((s, r) => s + (Number.isFinite(r.cost) ? r.cost : 0), 0),
+    [serviceForSelectedBike],
+  )
+  const totalExpenses = totalFuelCost + totalServiceSpend
   const totalKm = fuelForSelectedBike.reduce((s, e) => s + e.distanceKm, 0)
   const last = fuelForSelectedBike[0]
   const estRange =
@@ -56,6 +72,86 @@ export default function Dashboard() {
     <div className="flex flex-col gap-8 lg:gap-10">
       <h1 className="sr-only">RideIQ home</h1>
 
+      {bikes.length > 1 ? (
+        <BikeSelectDropdown id="dash-bike" label="Dashboard for bike" className="max-w-md" />
+      ) : null}
+
+      <div
+        className="flex max-w-md gap-1 rounded-full border border-[var(--rs-border)] bg-[var(--rs-surface2)] p-1"
+        role="tablist"
+        aria-label="Dashboard view"
+      >
+        <button
+          type="button"
+          role="tab"
+          aria-selected={dashTab === 'overview'}
+          className={`flex-1 rounded-full px-3 py-2 text-center text-xs font-semibold transition ${
+            dashTab === 'overview'
+              ? 'bg-[var(--rs-surface)] text-[var(--rs-text)] shadow-sm'
+              : 'text-[var(--rs-muted)] hover:text-[var(--rs-text)]'
+          }`}
+          onClick={() => setDashTab('overview')}
+        >
+          Overview
+        </button>
+        <button
+          type="button"
+          role="tab"
+          aria-selected={dashTab === 'expenses'}
+          className={`flex-1 rounded-full px-3 py-2 text-center text-xs font-semibold transition ${
+            dashTab === 'expenses'
+              ? 'bg-[var(--rs-surface)] text-[var(--rs-text)] shadow-sm'
+              : 'text-[var(--rs-muted)] hover:text-[var(--rs-text)]'
+          }`}
+          onClick={() => setDashTab('expenses')}
+        >
+          Expenses
+        </button>
+      </div>
+
+      {dashTab === 'expenses' ? (
+        <section className="space-y-4" aria-label="Fuel and service expenses">
+          <SectionHeading>Spending · this bike</SectionHeading>
+          <p className="text-xs text-[var(--rs-muted)]">
+            Totals combine fuel logged under Fuel and workshop costs under Service for{' '}
+            <span className="font-medium text-[var(--rs-text)]">
+              {selectedBike.brand} {selectedBike.model}
+            </span>
+            .
+          </p>
+          <div className="grid gap-2.5 sm:grid-cols-3">
+            <StatTile
+              label="Fuel (log)"
+              value={formatMoney(totalFuelCost)}
+              footnote="All fill-ups for this bike"
+              footTone="muted"
+            />
+            <StatTile
+              label="Service & parts"
+              value={formatMoney(totalServiceSpend)}
+              footnote="Sum of service records"
+              footTone="muted"
+            />
+            <StatTile
+              label="Total"
+              value={formatMoney(totalExpenses)}
+              footnote="Fuel + service"
+              footTone="accent"
+            />
+          </div>
+          <div className="flex flex-wrap gap-3 text-xs">
+            <Link to="/fuel" className="font-medium text-[var(--rs-accent)]">
+              Open fuel log →
+            </Link>
+            <Link to="/service" className="font-medium text-[var(--rs-accent)]">
+              Open service log →
+            </Link>
+          </div>
+        </section>
+      ) : null}
+
+      {dashTab === 'overview' ? (
+        <>
       {/* Hero + stats — side by side from lg; stats widen to 4 columns on xl */}
       <section className="grid gap-5 lg:grid-cols-12 lg:items-stretch lg:gap-6 xl:gap-8" aria-labelledby="dash-hero-heading">
         <div id="dash-hero-heading" className="sr-only">
@@ -68,16 +164,25 @@ export default function Dashboard() {
             aria-hidden
           />
           <div className="relative flex flex-col items-center gap-3 sm:flex-row sm:items-start sm:gap-4 lg:flex-col lg:items-start xl:flex-row xl:items-center">
-            <div className="text-5xl sm:text-[3.25rem]" aria-hidden>
-              🏍️
-            </div>
+            {selectedBike.image ? (
+              <img
+                src={selectedBike.image}
+                alt=""
+                className="h-20 w-20 shrink-0 rounded-2xl border border-[var(--rs-border)] object-cover shadow-sm sm:h-24 sm:w-24"
+              />
+            ) : (
+              <div className="text-5xl sm:text-[3.25rem]" aria-hidden>
+                🏍️
+              </div>
+            )}
             <div className="min-w-0 flex-1">
               <div className="font-[family-name:var(--rs-font-head)] text-lg font-extrabold text-[var(--rs-text)] sm:text-xl">
                 {selectedBike.brand} {selectedBike.model}
               </div>
               <div className="mt-1 text-[13px] tracking-wide text-[var(--rs-muted)]">{selectedBike.registrationNumber}</div>
               <div className="mt-2 text-[11px] leading-relaxed text-[var(--rs-muted)]">
-                {selectedBike.year} · {selectedBike.engineCc} cc · {selectedBike.fuelType} · {selectedBike.category}
+                {selectedBike.year} · {formatEngineCcDisplay(selectedBike.engineCc)} · {selectedBike.fuelType} ·{' '}
+                {selectedBike.category}
               </div>
             </div>
           </div>
@@ -215,7 +320,10 @@ export default function Dashboard() {
       <section className="min-w-0 space-y-4" aria-label="AI smart tips">
         <SectionHeading>AI smart tips</SectionHeading>
 
-        <RsCard title="Best speed for mileage" action={<Badge tone="accent">125cc bike</Badge>}>
+        <RsCard
+          title="Best speed for mileage"
+          action={<Badge tone="accent">{formatEngineCcLabel(selectedBike.engineCc)}</Badge>}
+        >
           <div className="flex gap-1.5">
             {speedZones.map((z) => (
               <div
@@ -247,6 +355,8 @@ export default function Dashboard() {
 
         <AiTips embedded />
       </section>
+        </>
+      ) : null}
     </div>
   )
 }
