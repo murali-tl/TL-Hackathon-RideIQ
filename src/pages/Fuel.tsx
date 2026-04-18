@@ -1,7 +1,9 @@
 import type { FormEvent } from 'react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { BikeSelectDropdown } from '../components/BikeSelectDropdown'
 import { Field, Select, TextInput } from '../components/Form'
+import { IconTrash } from '../components/icons'
 import { useRide } from '../hooks/useRide'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
@@ -9,6 +11,7 @@ import { ProgressBar } from '../components/ui/ProgressBar'
 import { RsCard } from '../components/ui/RsCard'
 import { SectionHeading } from '../components/ui/SectionHeading'
 import { StatTile } from '../components/ui/StatTile'
+import { engineCcToFuelCalculatorType } from '../utils/bikeCc'
 import type { BikeType, RidingStyle } from '../utils/fuelCalculator'
 import { bikeDefaults, calculateFuelEstimate } from '../utils/fuelCalculator'
 
@@ -29,7 +32,7 @@ function sumThisMonth(entries: { date: string; cost: number }[]) {
 }
 
 export default function Fuel() {
-  const { fuelForSelectedBike, selectedBike, addFuelEntry, mileageStats } = useRide()
+  const { bikes, fuelForSelectedBike, selectedBike, addFuelEntry, deleteFuelEntry, mileageStats } = useRide()
   const [tab, setTab] = useState<'calc' | 'log'>('calc')
 
   const [bikeType, setBikeType] = useState<BikeType>('125cc')
@@ -37,6 +40,12 @@ export default function Fuel() {
   const [fuelPrice, setFuelPrice] = useState('103')
   const [ridingStyle, setRidingStyle] = useState<RidingStyle>('normal')
   const [showResult, setShowResult] = useState(false)
+
+  useEffect(() => {
+    if (selectedBike?.engineCc) {
+      setBikeType(engineCcToFuelCalculatorType(selectedBike.engineCc))
+    }
+  }, [selectedBike?.id, selectedBike?.engineCc])
 
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [fuelLiters, setFuelLiters] = useState('')
@@ -108,6 +117,11 @@ export default function Fuel() {
 
   return (
     <div>
+      {bikes.length > 1 ? (
+        <div className="mb-4 max-w-md">
+          <BikeSelectDropdown id="fuel-bike" label="Fuel data for bike" />
+        </div>
+      ) : null}
       <div className="mb-4 flex rounded-full border border-[var(--rs-border)] bg-[var(--rs-surface2)] p-1">
         <button
           type="button"
@@ -281,15 +295,29 @@ export default function Fuel() {
               <ul className="divide-y divide-[var(--rs-border)]">
                 {fuelForSelectedBike.map((e) => (
                   <li key={e.id} className="flex flex-col gap-1 py-3 first:pt-0">
-                    <div className="flex justify-between gap-2">
-                      <span className="text-[13px] font-medium text-[var(--rs-text)]">{e.date}</span>
-                      <span className="font-[family-name:var(--rs-font-head)] text-base font-bold text-[var(--rs-accent)]">
-                        {e.mileage} km/L
-                      </span>
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="min-w-0 flex-1">
+                        <div className="text-[13px] font-medium text-[var(--rs-text)]">{e.date}</div>
+                        <p className="mt-0.5 text-xs text-[var(--rs-muted)]">
+                          {e.fuelLiters} L · {formatMoney(e.cost)} · {e.distanceKm} km
+                        </p>
+                      </div>
+                      <div className="flex shrink-0 items-center gap-2">
+                        <span className="font-[family-name:var(--rs-font-head)] text-base font-bold text-[var(--rs-accent)]">
+                          {e.mileage} km/L
+                        </span>
+                        <button
+                          type="button"
+                          className="rounded-lg p-1.5 text-[var(--rs-muted)] transition hover:bg-[rgba(255,85,85,0.12)] hover:text-[var(--rs-red)]"
+                          aria-label={`Delete fuel log ${e.date}`}
+                          onClick={() => {
+                            if (confirm(`Remove the fuel entry from ${e.date}?`)) deleteFuelEntry(e.id)
+                          }}
+                        >
+                          <IconTrash className="h-4 w-4" />
+                        </button>
+                      </div>
                     </div>
-                    <p className="text-xs text-[var(--rs-muted)]">
-                      {e.fuelLiters} L · {formatMoney(e.cost)} · {e.distanceKm} km
-                    </p>
                   </li>
                 ))}
               </ul>

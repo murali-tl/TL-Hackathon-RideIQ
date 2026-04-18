@@ -1,4 +1,4 @@
-import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes } from 'react'
+import type { InputHTMLAttributes, ReactNode, SelectHTMLAttributes, TextareaHTMLAttributes } from 'react'
 
 const fieldClass =
   'w-full rounded-lg border border-[var(--rs-border)] bg-[var(--rs-surface2)] px-3 py-2.5 text-[13px] text-[var(--rs-text)] outline-none transition focus:border-[var(--rs-accent)]'
@@ -24,6 +24,10 @@ export function Field({ label, htmlFor, hint, children }: FieldProps) {
 
 export function TextInput({ className = '', ...props }: InputHTMLAttributes<HTMLInputElement>) {
   return <input className={`${fieldClass} ${className}`} {...props} />
+}
+
+export function TextArea({ className = '', rows = 3, ...props }: TextareaHTMLAttributes<HTMLTextAreaElement>) {
+  return <textarea rows={rows} className={`${fieldClass} min-h-[4.5rem] resize-y ${className}`} {...props} />
 }
 
 export function Select({ className = '', ...props }: SelectHTMLAttributes<HTMLSelectElement>) {

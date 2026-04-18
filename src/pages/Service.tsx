@@ -1,6 +1,7 @@
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { BikeSelectDropdown } from '../components/BikeSelectDropdown'
 import { Field, TextInput } from '../components/Form'
 import { useRide } from '../hooks/useRide'
 import { Button } from '../components/ui/Button'
@@ -14,7 +15,8 @@ function formatMoney(n: number) {
 }
 
 export default function Service() {
-  const { selectedBike: bikeFromCtx, serviceForSelectedBike, addServiceRecord, deleteServiceRecord } = useRide()
+  const { bikes, selectedBike: bikeFromCtx, serviceForSelectedBike, addServiceRecord, deleteServiceRecord } =
+    useRide()
   const bike = bikeFromCtx
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [title, setTitle] = useState('')
@@ -33,35 +35,54 @@ export default function Service() {
     )
   }
 
-  function onAdd(e: FormEvent) {
+  async function onAdd(e: FormEvent) {
     e.preventDefault()
     if (!bike) return
     const c = parseFloat(cost)
     const o = odo.trim() === '' ? null : parseFloat(odo)
     if (!title.trim() || !Number.isFinite(c) || c < 0) return
-    addServiceRecord({
-      bikeId: bike.id,
-      date,
-      title: title.trim(),
-      notes: notes.trim(),
-      cost: c,
-      odoKm: o != null && Number.isFinite(o) ? o : null,
-    })
-    setTitle('')
-    setNotes('')
-    setCost('')
-    setOdo('')
-    setDate(new Date().toISOString().slice(0, 10))
+    try {
+      await addServiceRecord({
+        bikeId: bike.id,
+        date,
+        title: title.trim(),
+        notes: notes.trim(),
+        cost: c,
+        odoKm: o != null && Number.isFinite(o) ? o : null,
+      })
+      setTitle('')
+      setNotes('')
+      setCost('')
+      setOdo('')
+      setDate(new Date().toISOString().slice(0, 10))
+    } catch {
+      /* RideContext sets syncError */
+    }
   }
 
   const sorted = [...serviceForSelectedBike].sort((a, b) => (a.date < b.date ? 1 : -1))
 
   return (
     <div>
+      {bikes.length > 1 ? (
+        <div className="mb-4 max-w-md">
+          <BikeSelectDropdown id="service-bike" label="Service for bike" />
+        </div>
+      ) : null}
       <p className="mb-3 text-xs text-[var(--rs-muted)]">
         Service history for <span className="font-medium text-[var(--rs-text)]">{bike.brand}</span>{' '}
-        <span className="font-medium text-[var(--rs-text)]">{bike.model}</span> — switch bikes from the strip
-        above or in <Link to="/bikes">Garage</Link>.
+        <span className="font-medium text-[var(--rs-text)]">{bike.model}</span>
+        {bikes.length > 1 ? (
+          <>
+            {' '}
+            — or pick another bike above. <Link to="/bikes">Garage</Link>.
+          </>
+        ) : (
+          <>
+            {' '}
+            — add more bikes in <Link to="/bikes">Garage</Link>.
+          </>
+        )}
       </p>
 
       <RsCard title="Log service">
@@ -111,7 +132,8 @@ export default function Service() {
                   type="button"
                   className="mt-1 text-[10px] text-[var(--rs-accent)] hover:underline"
                   onClick={() => {
-                    if (window.confirm('Remove this service record?')) deleteServiceRecord(s.id)
+                    if (!window.confirm('Remove this service record?')) return
+                    void deleteServiceRecord(s.id).catch(() => {})
                   }}
                 >
                   Remove
