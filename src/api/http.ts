@@ -1,7 +1,18 @@
-/** Base URL for API (production). In dev, Vite proxies `/api` to the backend. */
+import axios, { type AxiosError, isAxiosError } from 'axios'
+
+/**
+ * Backend API base URL from env (`VITE_API_URL`).
+ *
+ * - **Production:** set at build time, e.g. `https://api.yourdomain.com` (no trailing slash).
+ *   Backend must allow this UI origin in CORS if it differs from the API host.
+ * - **Dev:** leave unset to use relative `/api/...` (same origin as Vite); configure
+ *   `VITE_PROXY_TARGET` in `.env` so Vite forwards `/api` to your local backend.
+ * - **Dev direct:** set `VITE_API_URL=http://127.0.0.1:5001` to call the API without the proxy
+ *   (CORS must allow the Vite dev origin).
+ */
 export function apiBase(): string {
   const v = import.meta.env.VITE_API_URL
-  return typeof v === 'string' ? v.replace(/\/$/, '') : ''
+  return typeof v === 'string' ? v.trim().replace(/\/$/, '') : ''
 }
 
 export class ApiError extends Error {
@@ -16,31 +27,28 @@ export class ApiError extends Error {
   }
 }
 
-export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> {
-  const url = `${apiBase()}${path.startsWith('/') ? path : `/${path}`}`
-  const res = await fetch(url, {
-    ...init,
-    headers: {
-      Accept: 'application/json',
-      ...(init?.body ? { 'Content-Type': 'application/json' } : {}),
-      ...init?.headers,
-    },
-  })
-  const text = await res.text()
-  let json: unknown = null
-  if (text) {
-    try {
-      json = JSON.parse(text) as unknown
-    } catch {
-      json = { raw: text }
+/** Shared Axios client for all RideIQ API modules. */
+export const api = axios.create({
+  baseURL: apiBase(),
+  headers: {
+    Accept: 'application/json',
+  },
+  /** Large JSON bodies (Base64 documents / bike photos). */
+  timeout: 120_000,
+})
+
+api.interceptors.response.use(
+  (response) => response,
+  (error: AxiosError<{ message?: string }>) => {
+    if (!isAxiosError(error)) {
+      return Promise.reject(error)
     }
-  }
-  if (!res.ok) {
-    const msg =
-      json && typeof json === 'object' && json !== null && 'message' in json
-        ? String((json as { message: unknown }).message)
-        : res.statusText
-    throw new ApiError(msg || 'Request failed', res.status, json)
-  }
-  return json as T
-}
+    const status = error.response?.status ?? 0
+    const body: unknown = error.response?.data ?? { detail: error.message }
+    let message = error.message
+    if (body && typeof body === 'object' && body !== null && 'message' in body) {
+      message = String((body as { message: unknown }).message)
+    }
+    return Promise.reject(new ApiError(message || 'Request failed', status, body))
+  },
+)

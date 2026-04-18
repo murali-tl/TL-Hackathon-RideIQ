@@ -1,4 +1,4 @@
-import { apiFetch } from './http'
+import { api } from './http'
 import type { DocumentExtraction, VaultDocument } from '../types'
 
 type ApiDoc = {
@@ -19,8 +19,8 @@ type ApiDoc = {
 type ApiEnvelope<T> = { success: boolean; data: T }
 
 export async function fetchDocumentsForBike(bikeId: string): Promise<VaultDocument[]> {
-  const res = await apiFetch<ApiEnvelope<ApiDoc[]>>(`/api/documents/${bikeId}`)
-  return (res.data ?? []).map(mapDocument)
+  const { data: envelope } = await api.get<ApiEnvelope<ApiDoc[]>>(`/api/documents/${bikeId}`)
+  return (envelope.data ?? []).map(mapDocument)
 }
 
 export async function createDocumentApi(payload: {
@@ -33,20 +33,17 @@ export async function createDocumentApi(payload: {
   expiryDate?: string | null
   extractedData: Record<string, unknown>
 }): Promise<VaultDocument> {
-  const res = await apiFetch<ApiEnvelope<ApiDoc>>('/api/documents', {
-    method: 'POST',
-    body: JSON.stringify({
-      bikeId: payload.bikeId,
-      name: payload.name,
-      mimeType: payload.mimeType,
-      category: payload.category,
-      documentNumber: payload.documentNumber ?? '',
-      expiryDate: payload.expiryDate || null,
-      image: payload.image,
-      extractedData: payload.extractedData,
-    }),
+  const { data: envelope } = await api.post<ApiEnvelope<ApiDoc>>('/api/documents', {
+    bikeId: payload.bikeId,
+    name: payload.name,
+    mimeType: payload.mimeType,
+    category: payload.category,
+    documentNumber: payload.documentNumber ?? '',
+    expiryDate: payload.expiryDate || null,
+    image: payload.image,
+    extractedData: payload.extractedData,
   })
-  return mapDocument(res.data)
+  return mapDocument(envelope.data)
 }
 
 export async function updateDocumentApi(
@@ -60,11 +57,8 @@ export async function updateDocumentApi(
     extractedData: Record<string, unknown>
   }>,
 ): Promise<VaultDocument> {
-  const res = await apiFetch<ApiEnvelope<ApiDoc>>(`/api/documents/${id}`, {
-    method: 'PUT',
-    body: JSON.stringify(patch),
-  })
-  return mapDocument(res.data)
+  const { data: envelope } = await api.put<ApiEnvelope<ApiDoc>>(`/api/documents/${id}`, patch)
+  return mapDocument(envelope.data)
 }
 
 function mapDocument(d: ApiDoc): VaultDocument {

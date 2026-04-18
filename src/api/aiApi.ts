@@ -1,4 +1,4 @@
-import { apiFetch } from './http'
+import { api } from './http'
 
 export type GeminiExtractResult = {
   holderName: string | null
@@ -18,9 +18,9 @@ export async function extractDocumentWithGemini(payload: {
   fileName: string
   category?: string
 }): Promise<GeminiExtractResult> {
-  const res = await apiFetch<ApiEnvelope<GeminiExtractResult>>('/api/ai/document-extract', {
-    method: 'POST',
-    body: JSON.stringify(payload),
-  })
-  return res.data
+  const { data: envelope } = await api.post<ApiEnvelope<GeminiExtractResult>>(
+    '/api/ai/document-extract',
+    payload,
+  )
+  return envelope.data
 }
