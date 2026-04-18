@@ -94,6 +94,10 @@ export type BunkPlace = {
   boost: string
   reviews: number
   accentRank: 'accent' | 'muted' | 'outline'
+  /** Community average from submitted star ratings (when API-backed). */
+  averageRating?: number | null
+  ratingCount?: number
+  commentCount?: number
 }
 
 /** User note on a bunk (community or device-local when API is offline). */

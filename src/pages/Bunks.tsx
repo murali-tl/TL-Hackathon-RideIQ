@@ -393,6 +393,13 @@ export default function Bunks() {
           <p className="mt-0.5 text-xs text-[var(--rs-muted)]">📍 {b.location}</p>
           <div className="mt-2">
             <Stars n={Math.min(5, Math.max(0, Math.round(b.stars)))} />
+            {useApi === true && b.averageRating != null && (b.ratingCount ?? 0) > 0 ? (
+              <p className="mt-1 text-[11px] text-[var(--rs-muted)]">
+                Community avg <span className="font-semibold text-[var(--rs-text)]">{b.averageRating.toFixed(2)}</span>★
+                from {b.ratingCount} rating{(b.ratingCount ?? 0) === 1 ? '' : 's'}
+                {b.commentCount != null ? ` · ${b.commentCount} comment${b.commentCount === 1 ? '' : 's'}` : ''}
+              </p>
+            ) : null}
             {useApi !== true && ratings[b.id] !== undefined && (
               <p className="mt-1 text-[11px] text-[var(--rs-muted)]">Includes your rating ({ratings[b.id]}★)</p>
             )}

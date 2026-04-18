@@ -35,6 +35,7 @@ export const api = axios.create({
   },
   /** Large JSON bodies (Base64 documents / bike photos). */
   timeout: 120_000,
+  withCredentials: true,
 })
 
 api.interceptors.response.use(
@@ -44,6 +45,17 @@ api.interceptors.response.use(
       return Promise.reject(error)
     }
     const status = error.response?.status ?? 0
+    if (status === 401) {
+      const url = String(error.config?.url ?? '')
+      if (
+        !url.includes('/api/auth/me') &&
+        !url.includes('/api/auth/login') &&
+        !url.includes('/api/auth/register') &&
+        !url.includes('/api/auth/logout')
+      ) {
+        window.dispatchEvent(new CustomEvent('rideiq:session-expired'))
+      }
+    }
     const body: unknown = error.response?.data ?? { detail: error.message }
     let message = error.message
     if (body && typeof body === 'object' && body !== null && 'message' in body) {

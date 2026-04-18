@@ -5,6 +5,7 @@ import { BikeSwitcher } from './BikeSwitcher'
 import { LottieBikeLoading } from './LottieBikeLoading'
 import { ThemeBikeToggle } from './ThemeBikeToggle'
 import { useRide } from '../hooks/useRide'
+import { useAuth } from '../context/AuthContext'
 
 function navLinkClass(isActive: boolean, variant: 'pill' | 'sidebar') {
   if (variant === 'pill') {
@@ -27,6 +28,7 @@ function navLinkClass(isActive: boolean, variant: 'pill' | 'sidebar') {
  */
 export function Layout() {
   const { toggleTheme, apiReady, syncError, clearSyncError } = useRide()
+  const { user, logout } = useAuth()
 
   return (
     <div className="flex h-svh min-h-0 w-full min-w-0 overflow-hidden">
@@ -54,7 +56,22 @@ export function Layout() {
           ))}
         </nav>
 
-        <div className="shrink-0 border-t border-[var(--rs-border)] bg-[var(--rs-bg)]/50 p-3">
+        <div className="shrink-0 space-y-2 border-t border-[var(--rs-border)] bg-[var(--rs-bg)]/50 p-3">
+          <div className="min-w-0 rounded-lg border border-[var(--rs-border)] bg-[var(--rs-surface2)] px-2.5 py-2">
+            <p className="truncate text-[11px] font-medium text-[var(--rs-text)]" title={user?.email}>
+              {user?.name ?? 'Rider'}
+            </p>
+            <p className="truncate text-[10px] text-[var(--rs-muted)]" title={user?.email}>
+              {user?.email}
+            </p>
+            <button
+              type="button"
+              className="mt-2 w-full rounded-md border border-[var(--rs-border)] bg-[var(--rs-surface)] px-2 py-1.5 text-[11px] font-medium text-[var(--rs-text)] hover:bg-[var(--rs-surface2)]"
+              onClick={() => void logout()}
+            >
+              Sign out
+            </button>
+          </div>
           <BikeSwitcher orientation="vertical" />
         </div>
       </aside>
@@ -91,6 +108,19 @@ export function Layout() {
             ))}
           </nav>
 
+          <div className="flex flex-wrap items-center gap-2 border-t border-[var(--rs-border)] px-3 py-2 sm:px-4">
+            <div className="min-w-0 flex-1 truncate text-[10px] text-[var(--rs-muted)]">
+              <span className="font-medium text-[var(--rs-text)]">{user?.name}</span>
+              {user?.email ? <span className="hidden sm:inline"> · {user.email}</span> : null}
+            </div>
+            <button
+              type="button"
+              className="shrink-0 rounded-full border border-[var(--rs-border)] px-2.5 py-1 text-[10px] font-medium text-[var(--rs-text)]"
+              onClick={() => void logout()}
+            >
+              Out
+            </button>
+          </div>
           <div className="border-t border-[var(--rs-border)] px-3 py-2 sm:px-4">
             <BikeSwitcher orientation="horizontal" />
           </div>
