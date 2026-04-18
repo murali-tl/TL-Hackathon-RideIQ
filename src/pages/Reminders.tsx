@@ -2,6 +2,7 @@ import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Field, TextInput } from '../components/Form'
+import { BikeSelectDropdown } from '../components/BikeSelectDropdown'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { RsCard } from '../components/ui/RsCard'
@@ -49,6 +50,7 @@ function Toggle({
 
 export default function Reminders() {
   const {
+    bikes,
     remindersForSelectedBike,
     selectedBike,
     addReminder,
@@ -83,6 +85,11 @@ export default function Reminders() {
 
   return (
     <div>
+      {bikes.length > 1 ? (
+        <div className="mb-4 max-w-md">
+          <BikeSelectDropdown id="reminders-bike" label="Reminders for bike" />
+        </div>
+      ) : null}
       <p className="mb-2 text-[11px] text-[var(--rs-muted)]">
         Showing reminders for <span className="font-medium text-[var(--rs-text)]">{selectedBike.registrationNumber}</span>
       </p>

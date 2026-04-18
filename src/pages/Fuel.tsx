@@ -1,6 +1,7 @@
 import type { FormEvent } from 'react'
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { BikeSelectDropdown } from '../components/BikeSelectDropdown'
 import { Field, Select, TextInput } from '../components/Form'
 import { IconTrash } from '../components/icons'
 import { useRide } from '../hooks/useRide'
@@ -10,6 +11,7 @@ import { ProgressBar } from '../components/ui/ProgressBar'
 import { RsCard } from '../components/ui/RsCard'
 import { SectionHeading } from '../components/ui/SectionHeading'
 import { StatTile } from '../components/ui/StatTile'
+import { engineCcToFuelCalculatorType } from '../utils/bikeCc'
 import type { BikeType, RidingStyle } from '../utils/fuelCalculator'
 import { bikeDefaults, calculateFuelEstimate } from '../utils/fuelCalculator'
 
@@ -30,7 +32,7 @@ function sumThisMonth(entries: { date: string; cost: number }[]) {
 }
 
 export default function Fuel() {
-  const { fuelForSelectedBike, selectedBike, addFuelEntry, deleteFuelEntry, mileageStats } = useRide()
+  const { bikes, fuelForSelectedBike, selectedBike, addFuelEntry, deleteFuelEntry, mileageStats } = useRide()
   const [tab, setTab] = useState<'calc' | 'log'>('calc')
 
   const [bikeType, setBikeType] = useState<BikeType>('125cc')
@@ -38,6 +40,12 @@ export default function Fuel() {
   const [fuelPrice, setFuelPrice] = useState('103')
   const [ridingStyle, setRidingStyle] = useState<RidingStyle>('normal')
   const [showResult, setShowResult] = useState(false)
+
+  useEffect(() => {
+    if (selectedBike?.engineCc) {
+      setBikeType(engineCcToFuelCalculatorType(selectedBike.engineCc))
+    }
+  }, [selectedBike?.id, selectedBike?.engineCc])
 
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [fuelLiters, setFuelLiters] = useState('')
@@ -109,6 +117,11 @@ export default function Fuel() {
 
   return (
     <div>
+      {bikes.length > 1 ? (
+        <div className="mb-4 max-w-md">
+          <BikeSelectDropdown id="fuel-bike" label="Fuel data for bike" />
+        </div>
+      ) : null}
       <div className="mb-4 flex rounded-full border border-[var(--rs-border)] bg-[var(--rs-surface2)] p-1">
         <button
           type="button"

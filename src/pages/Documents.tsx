@@ -1,7 +1,8 @@
 import type { ChangeEvent, FormEvent } from 'react'
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { extractDocumentWithGemini } from '../api/aiApi'
+import { BikeSelectDropdown } from '../components/BikeSelectDropdown'
 import { Field, Select, TextInput } from '../components/Form'
 import { IconTrash } from '../components/icons'
 import { useRide } from '../hooks/useRide'
@@ -54,13 +55,18 @@ function statusPill(doc: VaultDocument) {
 type ExEdit = { holderName: string; documentNumber: string; expiryDateIso: string }
 
 export default function Documents() {
-  const { documentsForSelectedBike, selectedBike, addDocument, updateDocument, deleteDocument, apiReady } = useRide()
+  const { bikes, documentsForSelectedBike, selectedBike, addDocument, updateDocument, deleteDocument, apiReady } =
+    useRide()
   const [busy, setBusy] = useState(false)
   const [ocrPct, setOcrPct] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const selected = documentsForSelectedBike.find((d) => d.id === selectedId)
   const [exEdit, setExEdit] = useState<ExEdit>({ holderName: '', documentNumber: '', expiryDateIso: '' })
+
+  const [uploadOpen, setUploadOpen] = useState(false)
+  const [uploadName, setUploadName] = useState('')
+  const [pendingFile, setPendingFile] = useState<File | null>(null)
 
   useEffect(() => {
     if (!selectedId) return
@@ -73,78 +79,108 @@ export default function Documents() {
     })
   }, [selectedId, documentsForSelectedBike])
 
-  async function onPick(ev: ChangeEvent<HTMLInputElement>) {
-    const file = ev.target.files?.[0]
-    ev.target.value = ''
-    if (!file || !selectedBike || !apiReady) return
-    setError(null)
-    setOcrPct(null)
-    setBusy(true)
-    try {
-      validateUpload(file)
-    } catch (err) {
-      setBusy(false)
-      const msg = err instanceof DocumentProcessError ? err.message : 'Invalid file.'
-      setError(msg)
-      return
-    }
-    const mime = file.type || inferMimeFromName(file.name)
-    const category = inferDocumentCategory(file.name)
-    let extraction: DocumentExtraction
-    let extractionError: string | undefined
-    let dataUrl: string
-    try {
-      dataUrl = await fileToDataUrl(file)
-    } catch {
-      setBusy(false)
-      setError('Could not read this file.')
-      return
-    }
-    try {
-      const g = await extractDocumentWithGemini({
-        imageBase64: dataUrl,
-        mimeType: mime,
-        fileName: file.name,
-        category,
-      })
-      extraction = {
-        holderName: g.holderName,
-        documentNumber: g.documentNumber,
-        expiryDateIso: g.expiryDateIso,
-        confidence: g.confidence,
-        source: 'gemini',
-      }
-    } catch {
-      try {
-        extraction = await extractDocumentFields(file, (p) => setOcrPct(p))
-      } catch (err) {
-        const msg =
-          err instanceof DocumentProcessError
-            ? err.message
-            : err instanceof Error
-              ? err.message
-              : 'Something went wrong processing this file.'
-        extraction = emptyExtraction('none')
-        extractionError = msg
-        setError(msg)
-      }
-    }
-    try {
-      await addDocument({
-        bikeId: selectedBike.id,
-        name: file.name,
-        type: mime,
-        category,
-        extraction,
-        extractionError,
-        image: dataUrl,
-      })
-    } catch {
-      setError((prev) => prev ?? 'Could not save document to the server.')
-    } finally {
-      setBusy(false)
+  const processDocument = useCallback(
+    async (file: File, displayName: string) => {
+      if (!selectedBike || !apiReady) return
+      const nameForMeta = displayName.trim() || file.name
+      setError(null)
       setOcrPct(null)
+      setBusy(true)
+      try {
+        validateUpload(file)
+      } catch (err) {
+        setBusy(false)
+        const msg = err instanceof DocumentProcessError ? err.message : 'Invalid file.'
+        setError(msg)
+        return
+      }
+      const mime = file.type || inferMimeFromName(file.name)
+      const category = inferDocumentCategory(nameForMeta)
+      let extraction: DocumentExtraction
+      let extractionError: string | undefined
+      let dataUrl: string
+      try {
+        dataUrl = await fileToDataUrl(file)
+      } catch {
+        setBusy(false)
+        setError('Could not read this file.')
+        return
+      }
+      try {
+        const g = await extractDocumentWithGemini({
+          imageBase64: dataUrl,
+          mimeType: mime,
+          fileName: nameForMeta,
+          category,
+        })
+        extraction = {
+          holderName: g.holderName,
+          documentNumber: g.documentNumber,
+          expiryDateIso: g.expiryDateIso,
+          confidence: g.confidence,
+          source: 'gemini',
+        }
+      } catch {
+        try {
+          extraction = await extractDocumentFields(file, (p) => setOcrPct(p))
+        } catch (err) {
+          const msg =
+            err instanceof DocumentProcessError
+              ? err.message
+              : err instanceof Error
+                ? err.message
+                : 'Something went wrong processing this file.'
+          extraction = emptyExtraction('none')
+          extractionError = msg
+          setError(msg)
+        }
+      }
+      try {
+        await addDocument({
+          bikeId: selectedBike.id,
+          name: nameForMeta,
+          type: mime,
+          category,
+          extraction,
+          extractionError,
+          image: dataUrl,
+        })
+      } catch {
+        setError((prev) => prev ?? 'Could not save document to the server.')
+      } finally {
+        setBusy(false)
+        setOcrPct(null)
+      }
+    },
+    [addDocument, apiReady, selectedBike],
+  )
+
+  function openUploadModal() {
+    setUploadName('')
+    setPendingFile(null)
+    setError(null)
+    setUploadOpen(true)
+  }
+
+  function onModalFile(ev: ChangeEvent<HTMLInputElement>) {
+    const file = ev.target.files?.[0] ?? null
+    setPendingFile(file)
+    if (file && !uploadName.trim()) {
+      setUploadName(file.name.replace(/\.[^.]+$/, '') || file.name)
     }
+  }
+
+  async function onModalSubmit(e: FormEvent) {
+    e.preventDefault()
+    if (!pendingFile) {
+      setError('Choose a file to upload.')
+      return
+    }
+    const label = uploadName.trim() || pendingFile.name
+    setUploadOpen(false)
+    await processDocument(pendingFile, label)
+    setPendingFile(null)
+    setUploadName('')
   }
 
   async function onDeleteDocument(doc: VaultDocument) {
@@ -190,12 +226,16 @@ export default function Documents() {
 
   return (
     <div>
-      <p className="mb-2 text-[11px] text-[var(--rs-muted)]">
-        Documents for <span className="font-medium text-[var(--rs-text)]">{selectedBike.registrationNumber}</span> ·{' '}
-        <Link to="/bikes" className="text-[var(--rs-accent)]">
-          Edit bike in Garage
-        </Link>
-      </p>
+      <div className="mb-4 max-w-md space-y-3">
+        {bikes.length > 1 ? <BikeSelectDropdown id="docs-bike" label="Documents for bike" /> : null}
+        <p className="text-[11px] text-[var(--rs-muted)]">
+          Showing docs for{' '}
+          <span className="font-medium text-[var(--rs-text)]">{selectedBike.registrationNumber}</span> ·{' '}
+          <Link to="/bikes" className="text-[var(--rs-accent)]">
+            Garage
+          </Link>
+        </p>
+      </div>
 
       <SectionHeading>My documents</SectionHeading>
 
@@ -321,7 +361,12 @@ export default function Documents() {
         </>
       ) : null}
 
-      <label className="mb-3 flex cursor-pointer items-center justify-center gap-2 rounded-[var(--rs-radius)] border border-dashed border-[var(--rs-border)] bg-[var(--rs-surface)] px-4 py-4 transition hover:border-[var(--rs-accent)]">
+      <button
+        type="button"
+        disabled={busy || !apiReady}
+        onClick={openUploadModal}
+        className="mb-3 flex w-full cursor-pointer items-center justify-center gap-2 rounded-[var(--rs-radius)] border border-dashed border-[var(--rs-border)] bg-[var(--rs-surface)] px-4 py-4 text-left transition hover:border-[var(--rs-accent)] disabled:pointer-events-none disabled:opacity-50"
+      >
         <span className="text-lg" aria-hidden>
           📎
         </span>
@@ -330,12 +375,70 @@ export default function Documents() {
             {busy ? `Processing${ocrPct != null ? ` · OCR ${ocrPct}%` : '…'}` : 'Upload new document'}
           </div>
           <div className="text-[11px] text-[var(--rs-muted)]">
-            PDF, PNG, JPG, WEBP — max 10 MB · Gemini extraction when the server is configured, otherwise local OCR /
-            PDF text
+            PDF, PNG, JPG, WEBP — max 10 MB · Name your document before upload
           </div>
         </div>
-        <input type="file" className="sr-only" accept=".pdf,.png,.jpg,.jpeg,.webp" onChange={onPick} disabled={busy || !apiReady} />
-      </label>
+      </button>
+
+      {uploadOpen ? (
+        <div
+          className="fixed inset-0 z-[300] flex items-end justify-center bg-black/55 p-4 sm:items-center"
+          role="presentation"
+          onClick={() => !busy && setUploadOpen(false)}
+        >
+          <div
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="upload-doc-title"
+            className="w-full max-w-md rounded-[var(--rs-radius)] border border-[var(--rs-border)] bg-[var(--rs-surface)] p-4 shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <h2 id="upload-doc-title" className="font-[family-name:var(--rs-font-head)] text-lg font-bold text-[var(--rs-text)]">
+              Upload document
+            </h2>
+            <p className="mt-1 text-xs text-[var(--rs-muted)]">Enter a display name and choose a file for {selectedBike.registrationNumber}.</p>
+            <form onSubmit={onModalSubmit} className="mt-4 space-y-3">
+              <Field label="Document name" htmlFor="upload-doc-name">
+                <TextInput
+                  id="upload-doc-name"
+                  placeholder="e.g. Insurance policy 2025"
+                  value={uploadName}
+                  onChange={(e) => setUploadName(e.target.value)}
+                  autoFocus
+                />
+              </Field>
+              <Field label="File" htmlFor="upload-doc-file">
+                <input
+                  id="upload-doc-file"
+                  type="file"
+                  accept=".pdf,.png,.jpg,.jpeg,.webp"
+                  onChange={onModalFile}
+                  className="w-full rounded-lg border border-[var(--rs-border)] bg-[var(--rs-surface2)] px-3 py-2 text-[13px] text-[var(--rs-text)] file:mr-3 file:rounded-md file:border-0 file:bg-[var(--rs-accent)] file:px-3 file:py-1.5 file:text-xs file:font-medium file:text-white"
+                />
+              </Field>
+              {pendingFile ? (
+                <p className="text-[11px] text-[var(--rs-muted)]">
+                  Selected: <span className="text-[var(--rs-text)]">{pendingFile.name}</span>
+                </p>
+              ) : null}
+              <div className="flex gap-2 pt-1">
+                <Button
+                  type="button"
+                  variant="muted"
+                  className="flex-1"
+                  disabled={busy}
+                  onClick={() => !busy && setUploadOpen(false)}
+                >
+                  Cancel
+                </Button>
+                <Button type="submit" className="flex-1" disabled={busy || !pendingFile}>
+                  {busy ? 'Processing…' : 'Upload & extract'}
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      ) : null}
     </div>
   )
 }

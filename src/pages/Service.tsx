@@ -1,6 +1,7 @@
 import type { FormEvent } from 'react'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { BikeSelectDropdown } from '../components/BikeSelectDropdown'
 import { Field, TextInput } from '../components/Form'
 import { useRide } from '../hooks/useRide'
 import { Button } from '../components/ui/Button'
@@ -14,7 +15,8 @@ function formatMoney(n: number) {
 }
 
 export default function Service() {
-  const { selectedBike: bikeFromCtx, serviceForSelectedBike, addServiceRecord, deleteServiceRecord } = useRide()
+  const { bikes, selectedBike: bikeFromCtx, serviceForSelectedBike, addServiceRecord, deleteServiceRecord } =
+    useRide()
   const bike = bikeFromCtx
   const [date, setDate] = useState(() => new Date().toISOString().slice(0, 10))
   const [title, setTitle] = useState('')
@@ -62,10 +64,25 @@ export default function Service() {
 
   return (
     <div>
+      {bikes.length > 1 ? (
+        <div className="mb-4 max-w-md">
+          <BikeSelectDropdown id="service-bike" label="Service for bike" />
+        </div>
+      ) : null}
       <p className="mb-3 text-xs text-[var(--rs-muted)]">
         Service history for <span className="font-medium text-[var(--rs-text)]">{bike.brand}</span>{' '}
-        <span className="font-medium text-[var(--rs-text)]">{bike.model}</span> — switch bikes from the strip
-        above or in <Link to="/bikes">Garage</Link>.
+        <span className="font-medium text-[var(--rs-text)]">{bike.model}</span>
+        {bikes.length > 1 ? (
+          <>
+            {' '}
+            — or pick another bike above. <Link to="/bikes">Garage</Link>.
+          </>
+        ) : (
+          <>
+            {' '}
+            — add more bikes in <Link to="/bikes">Garage</Link>.
+          </>
+        )}
       </p>
 
       <RsCard title="Log service">

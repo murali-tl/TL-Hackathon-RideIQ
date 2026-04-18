@@ -102,6 +102,17 @@ export function IconGarage({ className }: IconProps) {
   )
 }
 
+/** Viewfinder / scan — for Bike scan (distinct from garage). */
+export function IconBikeScan({ className }: IconProps) {
+  return (
+    <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.75" aria-hidden>
+      <path d="M3 7V5a2 2 0 0 1 2-2h2M21 7V5a2 2 0 0 0-2-2h-2M3 17v2a2 2 0 0 0 2 2h2M21 17v2a2 2 0 0 1-2 2h-2" strokeLinecap="round" />
+      <rect x="7" y="7" width="10" height="10" rx="1.5" />
+      <path d="M12 10v4M10 12h4" strokeLinecap="round" />
+    </svg>
+  )
+}
+
 export type NavIconComponent = ComponentType<IconProps>
 
 export function Gauge({ className }: IconProps) {

@@ -1,5 +1,6 @@
 import { Link } from 'react-router-dom'
 import { useRide } from '../hooks/useRide'
+import { formatEngineCcDisplay } from '../utils/bikeCc'
 
 type BikeSwitcherProps = {
   /** `vertical` fills sidebar; `horizontal` for mobile toolbar. */
@@ -78,9 +79,10 @@ export function BikeSwitcher({ orientation = 'horizontal' }: BikeSwitcherProps) 
                 <span className="block truncate">
                   {b.brand} {b.model}
                 </span>
-                {!active ? (
-                  <span className={`mt-0.5 block truncate text-[10px] opacity-80`}>{b.registrationNumber}</span>
-                ) : null}
+                <span className={`mt-0.5 block truncate text-[10px] opacity-80`}>
+                  {b.registrationNumber}
+                  {b.engineCc?.trim() ? ` · ${formatEngineCcDisplay(b.engineCc)}` : ''}
+                </span>
               </span>
             </button>
           )

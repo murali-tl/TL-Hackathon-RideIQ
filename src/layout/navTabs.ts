@@ -3,6 +3,7 @@ import {
   Folder,
   Fuel,
   IconBell,
+  IconBikeScan,
   IconGarage,
   IconHome,
   IconMapPin,
@@ -33,5 +34,5 @@ export const APP_NAV_TABS: readonly AppNavTab[] = [
   },
   { to: '/documents', label: 'My Docs', shortLabel: 'Docs', Icon: Folder },
   { to: '/bikes', label: 'Garage', Icon: IconGarage },
-  { to: '/bike-scan', label: 'Bike scan', Icon: IconGarage },
+  { to: '/bike-scan', label: 'Bike scan', shortLabel: 'Scan', Icon: IconBikeScan },
 ]
