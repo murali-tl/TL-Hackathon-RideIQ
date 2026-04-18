@@ -9,6 +9,7 @@ import {
 } from 'react'
 import type { AuthUser } from '../api/authApi'
 import * as authApi from '../api/authApi'
+import { setStoredAccessToken } from '../api/authSession'
 
 type AuthContextValue = {
   user: AuthUser | null
@@ -40,18 +41,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [])
 
   useEffect(() => {
-    const onExpired = () => setUser(null)
+    const onExpired = () => {
+      setStoredAccessToken(null)
+      setUser(null)
+    }
     window.addEventListener('rideiq:session-expired', onExpired)
     return () => window.removeEventListener('rideiq:session-expired', onExpired)
   }, [])
 
   const login = useCallback(async (email: string, password: string) => {
-    const u = await authApi.loginApi(email, password)
+    const { user: u, token } = await authApi.loginApi(email, password)
+    setStoredAccessToken(token)
     setUser(u)
   }, [])
 
   const register = useCallback(async (name: string, email: string, password: string) => {
-    const u = await authApi.registerApi(name, email, password)
+    const { user: u, token } = await authApi.registerApi(name, email, password)
+    setStoredAccessToken(token)
     setUser(u)
   }, [])
 
@@ -59,6 +65,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       await authApi.logoutApi()
     } finally {
+      setStoredAccessToken(null)
       setUser(null)
     }
   }, [])

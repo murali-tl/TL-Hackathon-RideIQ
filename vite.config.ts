@@ -21,6 +21,9 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: proxyTarget,
           changeOrigin: true,
+          /** Help browsers keep Set-Cookie for the dev UI host when proxying. */
+          cookieDomainRewrite: '',
+          cookiePathRewrite: '/',
           proxyTimeout: LONG_AI_MS,
           timeout: LONG_AI_MS,
           configure(proxy) {
