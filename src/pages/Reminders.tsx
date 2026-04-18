@@ -5,6 +5,7 @@ import { Field, TextInput } from '../components/Form'
 import { Badge } from '../components/ui/Badge'
 import { Button } from '../components/ui/Button'
 import { RsCard } from '../components/ui/RsCard'
+import { IconTrash } from '../components/icons'
 import { useRide } from '../hooks/useRide'
 import type { NotificationPrefs, ReminderBadge } from '../types'
 
@@ -47,7 +48,14 @@ function Toggle({
 }
 
 export default function Reminders() {
-  const { remindersForSelectedBike, selectedBike, addReminder, notificationPrefs, setNotificationPrefs } = useRide()
+  const {
+    remindersForSelectedBike,
+    selectedBike,
+    addReminder,
+    deleteReminder,
+    notificationPrefs,
+    setNotificationPrefs,
+  } = useRide()
   const [title, setTitle] = useState('')
   const [subtitle, setSubtitle] = useState('')
 
@@ -88,13 +96,23 @@ export default function Reminders() {
               key={r.id}
               className="flex items-center justify-between gap-2 border-b border-[var(--rs-border)] py-2.5 last:border-b-0"
             >
-              <div>
+              <div className="min-w-0 flex-1">
                 <div className="text-[13px] font-medium text-[var(--rs-text)]">{r.title}</div>
                 <div className="mt-0.5 text-xs text-[var(--rs-muted)]">{r.subtitle}</div>
               </div>
               <span className={`shrink-0 rounded-full px-2 py-1 text-[11px] font-semibold ${badgeCls[r.badge]}`}>
                 {r.badgeText}
               </span>
+              <button
+                type="button"
+                className="shrink-0 rounded-lg p-2 text-[var(--rs-muted)] transition hover:bg-[rgba(255,85,85,0.12)] hover:text-[var(--rs-red)]"
+                aria-label={`Delete reminder ${r.title}`}
+                onClick={() => {
+                  if (confirm(`Remove reminder “${r.title}”?`)) deleteReminder(r.id)
+                }}
+              >
+                <IconTrash className="h-4 w-4" />
+              </button>
             </div>
           ))}
         </div>

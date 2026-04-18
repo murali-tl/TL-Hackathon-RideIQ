@@ -33,25 +33,29 @@ export default function Service() {
     )
   }
 
-  function onAdd(e: FormEvent) {
+  async function onAdd(e: FormEvent) {
     e.preventDefault()
     if (!bike) return
     const c = parseFloat(cost)
     const o = odo.trim() === '' ? null : parseFloat(odo)
     if (!title.trim() || !Number.isFinite(c) || c < 0) return
-    addServiceRecord({
-      bikeId: bike.id,
-      date,
-      title: title.trim(),
-      notes: notes.trim(),
-      cost: c,
-      odoKm: o != null && Number.isFinite(o) ? o : null,
-    })
-    setTitle('')
-    setNotes('')
-    setCost('')
-    setOdo('')
-    setDate(new Date().toISOString().slice(0, 10))
+    try {
+      await addServiceRecord({
+        bikeId: bike.id,
+        date,
+        title: title.trim(),
+        notes: notes.trim(),
+        cost: c,
+        odoKm: o != null && Number.isFinite(o) ? o : null,
+      })
+      setTitle('')
+      setNotes('')
+      setCost('')
+      setOdo('')
+      setDate(new Date().toISOString().slice(0, 10))
+    } catch {
+      /* RideContext sets syncError */
+    }
   }
 
   const sorted = [...serviceForSelectedBike].sort((a, b) => (a.date < b.date ? 1 : -1))
@@ -111,7 +115,8 @@ export default function Service() {
                   type="button"
                   className="mt-1 text-[10px] text-[var(--rs-accent)] hover:underline"
                   onClick={() => {
-                    if (window.confirm('Remove this service record?')) deleteServiceRecord(s.id)
+                    if (!window.confirm('Remove this service record?')) return
+                    void deleteServiceRecord(s.id).catch(() => {})
                   }}
                 >
                   Remove

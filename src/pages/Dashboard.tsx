@@ -1,10 +1,20 @@
 import { Link } from 'react-router-dom'
 import { AiTips } from '../components/AiTips'
+import { Badge } from '../components/ui/Badge'
 import { useRide } from '../hooks/useRide'
+import { RsCard } from '../components/ui/RsCard'
 import { SectionHeading } from '../components/ui/SectionHeading'
 import { StatTile } from '../components/ui/StatTile'
 import { TipCard } from '../components/ui/TipCard'
+import { speedZones, staticSmartTips } from '../data/tipsContent'
 import { documentExpiryState, formatIsoDate } from '../utils/docDisplay'
+
+const zoneClass: Record<string, string> = {
+  accent: 'bg-[rgba(255,92,26,0.09)] text-[var(--rs-accent)]',
+  green: 'border border-[rgba(34,201,122,0.4)] bg-[rgba(34,201,122,0.15)] text-[var(--rs-green)]',
+  amber: 'bg-[rgba(255,160,64,0.09)] text-[var(--rs-accent2)]',
+  red: 'bg-[rgba(220,50,50,0.08)] text-[var(--rs-red)]',
+}
 
 function formatMoney(n: number) {
   return new Intl.NumberFormat(undefined, { style: 'currency', currency: 'INR', maximumFractionDigits: 0 }).format(
@@ -171,12 +181,6 @@ export default function Dashboard() {
         <div className="min-w-0 space-y-3 lg:col-span-7 xl:col-span-8">
           <SectionHeading>Today&apos;s alerts</SectionHeading>
           <TipCard
-            emoji="⚡"
-            title="Optimal speed zone: 45–55 km/h"
-            description="Your commuter gives best mileage in this band. Avoid sustained highway speeds above 70 km/h when you can."
-            iconBg="rgba(255,92,26,0.12)"
-          />
-          <TipCard
             emoji="🔧"
             title="Service window"
             description="Log odometer readings under Service after each visit to correlate with fuel data."
@@ -208,11 +212,40 @@ export default function Dashboard() {
         </div>
       </section>
 
-      <section className="min-w-0" aria-label="Efficiency coach">
-        <SectionHeading>Efficiency coach</SectionHeading>
-        <div className="mt-3">
-          <AiTips />
+      <section className="min-w-0 space-y-4" aria-label="AI smart tips">
+        <SectionHeading>AI smart tips</SectionHeading>
+
+        <RsCard title="Best speed for mileage" action={<Badge tone="accent">125cc bike</Badge>}>
+          <div className="flex gap-1.5">
+            {speedZones.map((z) => (
+              <div
+                key={z.range}
+                className={`flex-1 rounded-lg px-1.5 py-2 text-center text-[11px] font-medium ${zoneClass[z.tone]} ${
+                  z.highlight ? 'ring-1 ring-[var(--rs-green)]' : ''
+                }`}
+              >
+                <div className="font-[family-name:var(--rs-font-head)] text-[15px] font-extrabold">{z.range}</div>
+                <div>{z.unit}</div>
+                <div className={`mt-1 text-[10px] ${z.tone === 'green' ? 'font-bold' : 'text-[var(--rs-muted)]'}`}>
+                  {z.hint}
+                </div>
+              </div>
+            ))}
+          </div>
+        </RsCard>
+
+        <div>
+          <h3 className="mb-2.5 mt-1 font-[family-name:var(--rs-font-head)] text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--rs-muted)]">
+            Smart riding tips
+          </h3>
+          <div className="space-y-2">
+            {staticSmartTips.map((t) => (
+              <TipCard key={t.title} emoji={t.emoji} title={t.title} description={t.body} />
+            ))}
+          </div>
         </div>
+
+        <AiTips embedded />
       </section>
     </div>
   )

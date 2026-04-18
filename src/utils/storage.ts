@@ -267,6 +267,15 @@ export function saveBikes(bikes: Bike[]) {
   localStorage.setItem(BIKES_KEY, JSON.stringify(bikes))
 }
 
+/** Last selected bike id from localStorage (may not match current API bikes). */
+export function loadGarageSelectionId(): string | null {
+  try {
+    return localStorage.getItem(SELECTED_BIKE_KEY)
+  } catch {
+    return null
+  }
+}
+
 export function loadSelectedBikeId(bikes: Bike[]): string {
   if (!bikes.length) return SEED_BIKE_ID
   try {
@@ -457,7 +466,7 @@ export function loadFuelEntries(): FuelEntry[] {
     }
     const parsed = JSON.parse(raw) as unknown[]
     if (!Array.isArray(parsed)) return DUMMY_FUEL_ENTRIES
-    const fallback = loadBikes()[0]?.id ?? SEED_BIKE_ID
+    const fallback = SEED_BIKE_ID
     const migrated = parsed.map((r) => migrateFuelEntry(r, fallback)).filter(Boolean) as FuelEntry[]
     if (migrated.some((e, i) => JSON.stringify(e) !== JSON.stringify(parsed[i]))) {
       localStorage.setItem(FUEL_KEY, JSON.stringify(migrated))
@@ -481,7 +490,7 @@ export function loadDocuments(): VaultDocument[] {
     }
     const parsed = JSON.parse(raw) as unknown[]
     if (!Array.isArray(parsed)) return DUMMY_DOCUMENTS
-    const fallback = loadBikes()[0]?.id ?? SEED_BIKE_ID
+    const fallback = SEED_BIKE_ID
     const migrated = parsed.map((r) => migrateVaultDocument(r, fallback)).filter(Boolean) as VaultDocument[]
     if (migrated.some((e, i) => JSON.stringify(e) !== JSON.stringify(parsed[i]))) {
       localStorage.setItem(DOCS_KEY, JSON.stringify(migrated))
@@ -516,7 +525,7 @@ export function loadReminders(): Reminder[] {
     }
     const parsed = JSON.parse(raw) as unknown[]
     if (!Array.isArray(parsed)) return DEFAULT_REMINDERS
-    const fallback = loadBikes()[0]?.id ?? SEED_BIKE_ID
+    const fallback = SEED_BIKE_ID
     const migrated = parsed.map((r) => migrateReminder(r, fallback)).filter(Boolean) as Reminder[]
     if (migrated.some((e, i) => JSON.stringify(e) !== JSON.stringify(parsed[i]))) {
       localStorage.setItem(REMINDERS_KEY, JSON.stringify(migrated))
@@ -540,7 +549,7 @@ export function loadServiceHistory(): ServiceRecord[] {
     }
     const parsed = JSON.parse(raw) as unknown[]
     if (!Array.isArray(parsed)) return DEFAULT_SERVICE
-    const fallback = loadBikes()[0]?.id ?? SEED_BIKE_ID
+    const fallback = SEED_BIKE_ID
     const migrated = parsed.map((r) => migrateServiceRecord(r, fallback)).filter(Boolean) as ServiceRecord[]
     if (migrated.some((e, i) => JSON.stringify(e) !== JSON.stringify(parsed[i]))) {
       localStorage.setItem(SERVICE_KEY, JSON.stringify(migrated))
