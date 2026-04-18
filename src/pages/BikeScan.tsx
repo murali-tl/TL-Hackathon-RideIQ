@@ -8,14 +8,18 @@ import { apiPath } from '../utils/apiBase'
 import { prepareImageForAnalysis } from '../utils/prepareImageForAnalysis'
 
 type ModelsPayload = {
-  ollama_url: string
-  configured_vision_model: string
-  models: { name?: string }[]
+  bike_scan_provider?: 'ollama'
+  gemini_configured?: boolean
+  gemini_model?: string
+  ollama_url?: string
+  configured_vision_model?: string
+  models?: { name?: string }[]
   hint?: string
 }
 
 type AnalyzePayload = {
   model: string
+  vision_provider?: 'ollama'
   mime_type: string
   analysis: unknown
   raw_model_text: string
@@ -33,16 +37,16 @@ export default function BikeScan() {
 
   const loadModels = useCallback(async () => {
     try {
-      const res = await fetch(apiPath('/api/ai/models'))
+      const res = await fetch(apiPath('/api/ai/models'), { credentials: 'include' })
       const body = (await res.json()) as Envelope<ModelsPayload>
       if (!res.ok || !body.success || !body.data) {
         setModelsInfo(body.message ?? 'Could not load model list.')
         return
       }
       const n = body.data.models?.length ?? 0
-      setModelsInfo(
-        `${n} model(s) on ${body.data.ollama_url}. Using vision tag: ${body.data.configured_vision_model}.`,
-      )
+      const ollamaLine = `${n} model(s) on ${body.data.ollama_url ?? 'Ollama'}. Bike scan uses: ${body.data.configured_vision_model ?? '—'}.`
+      const hint = body.data.hint ? ` ${body.data.hint}` : ''
+      setModelsInfo(`${ollamaLine}${hint}`)
     } catch {
       setModelsInfo('Could not reach backend or Ollama for /api/ai/models.')
     }
@@ -75,6 +79,7 @@ export default function BikeScan() {
       fd.append('image', imageToSend)
       const res = await fetch(apiPath('/api/ai/analyze-bike-image'), {
         method: 'POST',
+        credentials: 'include',
         body: fd,
       })
       const body = (await res.json()) as Envelope<AnalyzePayload>
@@ -92,11 +97,12 @@ export default function BikeScan() {
 
   return (
     <div>
-      <RsCard title="Bike photo (local AI)" action={null}>
+      <RsCard title="Bike photo AI" action={null}>
         <p className="text-sm leading-relaxed text-[var(--rs-muted)]">
-          Upload a photo of your bike. The hackathon backend calls your machine&apos;s{' '}
-          <strong>Ollama</strong> vision model — no cloud image API. Photos are resized in the browser
-          before upload for faster runs.
+          Upload a photo of your bike. This page always uses your machine&apos;s <strong>Ollama</strong> vision model (
+          <code className="text-[var(--rs-text)]">OLLAMA_VISION_MODEL</code>). Documents and dashboard tips use{' '}
+          <strong>Gemini</strong> when <code className="text-[var(--rs-text)]">GEMINI_API_KEY</code> is set on the
+          server. Photos are resized in the browser before upload.
         </p>
         {modelsInfo ? <p className="mt-2 text-xs text-[var(--rs-muted)]">{modelsInfo}</p> : null}
         <div className="mt-4 flex flex-wrap items-center gap-2">

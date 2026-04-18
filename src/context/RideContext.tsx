@@ -33,6 +33,7 @@ import { getInitialGarageState } from '../utils/storageInit'
 import * as bikesApi from '../api/bikesApi'
 import * as documentsApi from '../api/documentsApi'
 import * as servicesApi from '../api/servicesApi'
+import { useAuth } from './AuthContext'
 
 type RideContextValue = {
   bikes: Bike[]
@@ -92,6 +93,7 @@ function applyThemeClass(mode: ThemeMode) {
 }
 
 export function RideProvider({ children }: { children: ReactNode }) {
+  const { user } = useAuth()
   const ig = useMemo(() => getInitialGarageState(), [])
   const [bikes, setBikes] = useState<Bike[]>(ig.bikes)
   const [selectedBikeId, setSelectedBikeIdState] = useState<string | null>(ig.selectedBikeId)
@@ -114,6 +116,15 @@ export function RideProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     let cancelled = false
     async function bootstrap() {
+      if (!user) {
+        setBikes([])
+        setDocuments([])
+        setServiceRecords([])
+        setSelectedBikeIdState(null)
+        setSyncError(null)
+        setApiReady(true)
+        return
+      }
       setApiReady(false)
       setSyncError(null)
       try {
@@ -143,7 +154,7 @@ export function RideProvider({ children }: { children: ReactNode }) {
     return () => {
       cancelled = true
     }
-  }, [])
+  }, [user?.id])
 
   useEffect(() => {
     if (selectedBikeId) saveSelectedBikeId(selectedBikeId)

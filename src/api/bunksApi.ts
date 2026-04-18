@@ -13,6 +13,9 @@ type ApiBunk = {
   boost: string
   reviews: number
   accentRank: 'accent' | 'muted' | 'outline'
+  averageRating?: number | null
+  ratingCount?: number
+  commentCount?: number
 }
 
 type ApiBunkComment = {
@@ -72,6 +75,9 @@ function mapBunk(b: ApiBunk): BunkPlace {
     boost: b.boost,
     reviews: b.reviews,
     accentRank,
+    averageRating: b.averageRating ?? undefined,
+    ratingCount: b.ratingCount,
+    commentCount: b.commentCount,
   }
 }
 

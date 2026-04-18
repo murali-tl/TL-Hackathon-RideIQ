@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { AiTips } from '../components/AiTips'
+import { DashboardAiTips } from '../components/DashboardAiTips'
 import { BikeSelectDropdown } from '../components/BikeSelectDropdown'
 import { Badge } from '../components/ui/Badge'
 import { useRide } from '../hooks/useRide'
@@ -8,7 +8,7 @@ import { RsCard } from '../components/ui/RsCard'
 import { SectionHeading } from '../components/ui/SectionHeading'
 import { StatTile } from '../components/ui/StatTile'
 import { TipCard } from '../components/ui/TipCard'
-import { speedZones, staticSmartTips } from '../data/tipsContent'
+import { speedZones } from '../data/tipsContent'
 import { documentExpiryState, formatIsoDate } from '../utils/docDisplay'
 import { formatEngineCcDisplay, formatEngineCcLabel } from '../utils/bikeCc'
 
@@ -342,18 +342,7 @@ export default function Dashboard() {
           </div>
         </RsCard>
 
-        <div>
-          <h3 className="mb-2.5 mt-1 font-[family-name:var(--rs-font-head)] text-[11px] font-semibold uppercase tracking-[0.12em] text-[var(--rs-muted)]">
-            Smart riding tips
-          </h3>
-          <div className="space-y-2">
-            {staticSmartTips.map((t) => (
-              <TipCard key={t.title} emoji={t.emoji} title={t.title} description={t.body} />
-            ))}
-          </div>
-        </div>
-
-        <AiTips embedded />
+        <DashboardAiTips />
       </section>
         </>
       ) : null}
