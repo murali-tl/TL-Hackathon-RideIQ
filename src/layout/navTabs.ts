@@ -9,4 +9,5 @@ export const APP_NAV_TABS = [
   { to: '/bunks', label: 'Bunks' },
   { to: '/documents', label: 'My Docs' },
   { to: '/bikes', label: 'Garage' },
+  { to: '/bike-scan', label: 'Bike scan' },
 ] as const

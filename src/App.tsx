@@ -6,6 +6,7 @@ import Dashboard from './pages/Dashboard'
 import Documents from './pages/Documents'
 import Fuel from './pages/Fuel'
 import Garage from './pages/Garage'
+import BikeScan from './pages/BikeScan'
 import Reminders from './pages/Reminders'
 import Service from './pages/Service'
 import Split from './pages/Split'
@@ -27,6 +28,7 @@ export default function App() {
             <Route path="/bunks" element={<Bunks />} />
             <Route path="/documents" element={<Documents />} />
             <Route path="/bikes" element={<Garage />} />
+            <Route path="/bike-scan" element={<BikeScan />} />
           </Route>
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
