@@ -1,4 +1,5 @@
 import axios, { type AxiosError, isAxiosError } from 'axios'
+import { getStoredAccessToken } from './authSession'
 
 /**
  * Backend API base URL from env (`VITE_API_URL`).
@@ -36,6 +37,14 @@ export const api = axios.create({
   /** Large JSON bodies (Base64 documents / bike photos). */
   timeout: 120_000,
   withCredentials: true,
+})
+
+api.interceptors.request.use((config) => {
+  const t = getStoredAccessToken()
+  if (t) {
+    config.headers.Authorization = `Bearer ${t}`
+  }
+  return config
 })
 
 api.interceptors.response.use(
